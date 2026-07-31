@@ -79,9 +79,11 @@ class AnalyticsController extends Controller
         $courseAnalytics = [];
         foreach ($courses as $course) {
             $courseRoomIds = Room::where('user_id', $instructorId)
-                ->whereIn('assessment_subject', [$course->title, $course->code])
-                ->orWhereHas('module', function ($q) use ($course) {
-                    $q->where('course_id', $course->id);
+                ->where(function ($query) use ($course) {
+                    $query->whereIn('assessment_subject', [$course->title, $course->code])
+                        ->orWhereHas('assessment.module', function ($q) use ($course) {
+                            $q->where('course_id', $course->id);
+                        });
                 })
                 ->pluck('id');
 
