@@ -31,6 +31,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
     ];
 
     /**
@@ -117,5 +118,10 @@ class User extends Authenticatable
         $nextSeq = $maxNumber + 1;
 
         return $tag . str_pad((string) $nextSeq, 4, '0', STR_PAD_LEFT);
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
     }
 }

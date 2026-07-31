@@ -94,6 +94,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/reports/{room}', [ReportController::class, 'destroy'])->name('reports.destroy');
     Route::get('/reports/{room}/participant/{participant}', [ReportController::class, 'showScript'])->name('reports.participant-script');
     Route::get('/reports/{room}/export-csv', [ReportController::class, 'exportCsv'])->name('reports.export-csv');
+
+    // Super Admin System Monitoring & Management
+    Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/users', [\App\Http\Controllers\Admin\AdminUserController::class, 'index'])->name('users.index');
+        Route::post('/users/{user}/toggle-role', [\App\Http\Controllers\Admin\AdminUserController::class, 'toggleRole'])->name('users.toggle-role');
+        Route::delete('/users/{user}', [\App\Http\Controllers\Admin\AdminUserController::class, 'destroy'])->name('users.destroy');
+        Route::get('/rooms', [\App\Http\Controllers\Admin\AdminRoomController::class, 'index'])->name('rooms.index');
+        Route::post('/rooms/{room}/end', [\App\Http\Controllers\Admin\AdminRoomController::class, 'endRoom'])->name('rooms.end');
+    });
 });
 
 require __DIR__.'/settings.php';

@@ -10,9 +10,10 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/react';
+import { type NavItem, type SharedData } from '@/types';
+import { Link, usePage } from '@inertiajs/react';
 import {
+    Activity,
     BarChart3,
     BookOpen,
     FileCheck2,
@@ -20,6 +21,8 @@ import {
     GraduationCap,
     LayoutDashboard,
     LogIn,
+    Radio,
+    Shield,
     Users,
 } from 'lucide-react';
 import AppLogo from './app-logo';
@@ -83,9 +86,37 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
+const adminNavItems: NavItem[] = [
+    {
+        title: 'Super Admin Control',
+        href: '#',
+        icon: Shield,
+        items: [
+            {
+                title: 'Platform Dashboard',
+                href: '/admin/dashboard',
+                icon: Activity,
+            },
+            {
+                title: 'Instructors Directory',
+                href: '/admin/users',
+                icon: Users,
+            },
+            {
+                title: 'Global Live Rooms',
+                href: '/admin/rooms',
+                icon: Radio,
+            },
+        ],
+    },
+];
+
 const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
+    const page = usePage<SharedData>();
+    const isSuperAdmin = page.props.auth?.user?.role === 'super_admin';
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -102,6 +133,9 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <NavMain items={mainNavItems} label="Main Portal Navigation" />
+                {isSuperAdmin && (
+                    <NavMain items={adminNavItems} label="Platform Super Admin" />
+                )}
             </SidebarContent>
 
             <SidebarFooter>
