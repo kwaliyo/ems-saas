@@ -14,12 +14,14 @@ import {
     HelpCircle,
     Layers,
     LogIn,
+    Menu,
     Play,
     Radio,
     Rocket,
     ShieldCheck,
     Sparkles,
     Users,
+    X,
     Zap,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -35,6 +37,7 @@ export default function Welcome({
 }) {
     const { auth } = usePage<SharedData>().props;
     const [joinCode, setJoinCode] = useState('');
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const handleJoinSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -58,9 +61,9 @@ export default function Welcome({
             <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary selection:text-primary-foreground">
                 {/* Navbar */}
                 <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-background/95 backdrop-blur-md">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
                         {/* Logo */}
-                        <Link href="/">
+                        <Link href="/" className="shrink-0">
                             <AppLogo />
                         </Link>
 
@@ -81,11 +84,11 @@ export default function Welcome({
                         </nav>
 
                         {/* CTA Controls */}
-                        <div className="flex items-center gap-3">
+                        <div className="hidden md:flex items-center gap-3">
                             <AppearanceToggleDropdown />
 
                             <Link href="/join">
-                                <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-xs font-bold hover:bg-primary/20 transition-colors">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold hover:bg-emerald-500/20 transition-colors">
                                     <Radio className="w-3.5 h-3.5 animate-pulse" /> Student Join
                                 </span>
                             </Link>
@@ -116,7 +119,129 @@ export default function Welcome({
                                 </>
                             )}
                         </div>
+
+                        {/* Mobile Header Right Controls */}
+                        <div className="flex md:hidden items-center gap-2">
+                            <AppearanceToggleDropdown />
+
+                            <button
+                                type="button"
+                                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                                className="p-2 rounded-xl border border-border bg-muted/50 text-foreground hover:bg-muted transition-colors cursor-pointer"
+                                aria-label="Toggle navigation menu"
+                            >
+                                {mobileMenuOpen ? (
+                                    <X className="w-5 h-5" />
+                                ) : (
+                                    <Menu className="w-5 h-5" />
+                                )}
+                            </button>
+                        </div>
                     </div>
+
+                    {/* Mobile Drawer / Slide-Down Menu */}
+                    {mobileMenuOpen && (
+                        <div className="md:hidden border-b border-border bg-background/98 backdrop-blur-xl px-4 py-6 space-y-5 animate-in slide-in-from-top duration-200 shadow-xl">
+                            {/* Mobile Navigation Links */}
+                            <nav className="flex flex-col space-y-3 font-semibold text-sm">
+                                <a
+                                    href="#features"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className="flex items-center gap-2 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                                >
+                                    <Layers className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Features
+                                </a>
+                                <a
+                                    href="#how-it-works"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className="flex items-center gap-2 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                                >
+                                    <Clock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> How It Works
+                                </a>
+                                <a
+                                    href="#student-access"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className="flex items-center gap-2 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                                >
+                                    <Radio className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Student Join
+                                </a>
+                                <a
+                                    href="#analytics"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className="flex items-center gap-2 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                                >
+                                    <BarChart3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Analytics & Reports
+                                </a>
+                            </nav>
+
+                            <hr className="border-border" />
+
+                            {/* Mobile Quick Join Code Input */}
+                            <form onSubmit={handleJoinSubmit} className="space-y-2">
+                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+                                    Join Live Room
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Enter Room Code (e.g. ROOM-101)"
+                                        value={joinCode}
+                                        onChange={(e) => setJoinCode(e.target.value)}
+                                        className="flex-1 px-3 py-2 rounded-lg border border-border bg-card text-foreground text-xs font-semibold uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                    />
+                                    <button
+                                        type="submit"
+                                        className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-500 transition-colors cursor-pointer"
+                                    >
+                                        Join
+                                    </button>
+                                </div>
+                            </form>
+
+                            <hr className="border-border" />
+
+                            {/* Mobile Account CTAs */}
+                            <div className="flex flex-col gap-2.5 pt-1">
+                                {auth.user ? (
+                                    <Link
+                                        href={dashboard()}
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-bold text-xs text-center flex items-center justify-center gap-2 shadow-xs"
+                                    >
+                                        Go to Dashboard <ArrowRight className="w-4 h-4" />
+                                    </Link>
+                                ) : (
+                                    <>
+                                        <Link
+                                            href="/join"
+                                            onClick={() => setMobileMenuOpen(false)}
+                                            className="w-full py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs text-center flex items-center justify-center gap-2"
+                                        >
+                                            <Radio className="w-4 h-4 animate-pulse" /> Student Join Portal
+                                        </Link>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Link
+                                                href={login()}
+                                                onClick={() => setMobileMenuOpen(false)}
+                                                className="py-2.5 rounded-xl border border-border text-foreground font-bold text-xs text-center hover:bg-muted transition-colors"
+                                            >
+                                                Log in
+                                            </Link>
+                                            {canRegister && (
+                                                <Link
+                                                    href={register()}
+                                                    onClick={() => setMobileMenuOpen(false)}
+                                                    className="py-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-xs text-center hover:opacity-90 transition-all shadow-xs"
+                                                >
+                                                    Register
+                                                </Link>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </header>
 
                 <main className="flex-1">
