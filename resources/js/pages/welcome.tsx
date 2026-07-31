@@ -24,6 +24,10 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 
+import AppearanceToggleDropdown from '@/components/appearance-dropdown';
+import { AppFooter } from '@/components/app-footer';
+import AppLogo from '@/components/app-logo';
+
 export default function Welcome({
     canRegister = true,
 }: {
@@ -43,7 +47,7 @@ export default function Welcome({
 
     return (
         <>
-            <Head title="EMS SAAS - Real-Time Continuous Assessment & Exam Platform">
+            <Head title="K-EMS - Continuous Assessment & Examination System">
                 <link rel="preconnect" href="https://fonts.bunny.net" />
                 <link
                     href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700,800"
@@ -56,19 +60,9 @@ export default function Welcome({
                 <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-background/95 backdrop-blur-md">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                         {/* Logo */}
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-black text-lg shadow-xs">
-                                <FileCheck2 className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <span className="font-extrabold text-lg tracking-tight text-foreground flex items-center gap-1.5">
-                                    EMS <span className="text-primary font-black">SAAS</span>
-                                </span>
-                                <span className="block text-[10px] text-muted-foreground font-semibold tracking-wider uppercase">
-                                    Assessment System
-                                </span>
-                            </div>
-                        </div>
+                        <Link href="/">
+                            <AppLogo />
+                        </Link>
 
                         {/* Navigation Links */}
                         <nav className="hidden md:flex items-center gap-6 text-xs font-bold text-muted-foreground">
@@ -88,6 +82,8 @@ export default function Welcome({
 
                         {/* CTA Controls */}
                         <div className="flex items-center gap-3">
+                            <AppearanceToggleDropdown />
+
                             <Link href="/join">
                                 <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-xs font-bold hover:bg-primary/20 transition-colors">
                                     <Radio className="w-3.5 h-3.5 animate-pulse" /> Student Join
@@ -391,18 +387,7 @@ export default function Welcome({
                     </section>
                 </main>
 
-                {/* Footer */}
-                <footer className="border-t border-border bg-card text-muted-foreground py-8">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium">
-                        <div className="flex items-center gap-2">
-                            <FileCheck2 className="w-4 h-4 text-primary" />
-                            <span className="font-bold text-foreground">EMS SAAS</span> — Continuous Assessment Platform
-                        </div>
-                        <div>
-                            &copy; {new Date().getFullYear()} EMS SAAS. All rights reserved.
-                        </div>
-                    </div>
-                </footer>
+                <AppFooter />
             </div>
         </>
     );

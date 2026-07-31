@@ -11,7 +11,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        if ($this->app->environment('production')) {
+            $cpanelPublic = base_path('../public_html');
+            if (is_dir($cpanelPublic)) {
+                $this->app->usePublicPath(realpath($cpanelPublic));
+            }
+        }
     }
 
     /**

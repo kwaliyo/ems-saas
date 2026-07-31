@@ -1,10 +1,3 @@
-import { Button } from '@/components/ui/button';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { useAppearance } from '@/hooks/use-appearance';
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { HTMLAttributes } from 'react';
@@ -15,53 +8,52 @@ export default function AppearanceToggleDropdown({
 }: HTMLAttributes<HTMLDivElement>) {
     const { appearance, updateAppearance } = useAppearance();
 
-    const getCurrentIcon = () => {
-        switch (appearance) {
-            case 'dark':
-                return <Moon className="h-5 w-5" />;
-            case 'light':
-                return <Sun className="h-5 w-5" />;
-            default:
-                return <Monitor className="h-5 w-5" />;
-        }
-    };
-
     return (
-        <div className={className} {...props}>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 rounded-md"
-                    >
-                        {getCurrentIcon()}
-                        <span className="sr-only">Toggle theme</span>
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => updateAppearance('light')}>
-                        <span className="flex items-center gap-2">
-                            <Sun className="h-5 w-5" />
-                            Light
-                        </span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => updateAppearance('dark')}>
-                        <span className="flex items-center gap-2">
-                            <Moon className="h-5 w-5" />
-                            Dark
-                        </span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                        onClick={() => updateAppearance('system')}
-                    >
-                        <span className="flex items-center gap-2">
-                            <Monitor className="h-5 w-5" />
-                            System
-                        </span>
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
+        <div
+            className={`flex items-center gap-1 p-1 rounded-xl bg-muted/80 border border-border/80 shadow-xs ${className}`}
+            {...props}
+        >
+            <button
+                type="button"
+                onClick={() => updateAppearance('light')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    appearance === 'light'
+                        ? 'bg-background text-amber-500 shadow-xs ring-1 ring-border'
+                        : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="Light Mode"
+            >
+                <Sun className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Light</span>
+            </button>
+
+            <button
+                type="button"
+                onClick={() => updateAppearance('dark')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    appearance === 'dark'
+                        ? 'bg-slate-900 text-indigo-400 shadow-xs ring-1 ring-indigo-500/30'
+                        : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="Dark Mode"
+            >
+                <Moon className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Dark</span>
+            </button>
+
+            <button
+                type="button"
+                onClick={() => updateAppearance('system')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    appearance === 'system'
+                        ? 'bg-background text-primary shadow-xs ring-1 ring-border'
+                        : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="System Mode"
+            >
+                <Monitor className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">System</span>
+            </button>
         </div>
     );
 }

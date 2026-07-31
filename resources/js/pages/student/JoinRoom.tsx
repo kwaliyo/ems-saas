@@ -1,9 +1,11 @@
 import AppearanceToggleDropdown from '@/components/appearance-dropdown';
+import { AppFooter } from '@/components/app-footer';
+import AppLogo from '@/components/app-logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2, KeyRound, Sparkles, UserCheck, Users, Zap } from 'lucide-react';
 import React, { useState } from 'react';
 
@@ -38,28 +40,28 @@ export default function JoinRoom({ initialCode = '', initialStudentId = '', erro
 
     return (
         <div
-            className={`min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-200 ${
+            className={`min-h-screen flex flex-col items-center justify-between p-4 transition-colors duration-200 ${
                 highContrast
                     ? 'bg-black text-yellow-400 font-mono'
                     : 'bg-background text-foreground'
             }`}
         >
-            <Head title="Join Assessment Room - EMS SAAS" />
+            <Head title="Join Assessment Room - K-EMS" />
 
             {/* Background Glow */}
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent pointer-events-none" />
 
-            <div className="w-full max-w-md relative z-10 space-y-6">
+            <div className="w-full max-w-md relative z-10 space-y-6 my-auto">
                 {/* Header Logo */}
-                <div className="text-center space-y-2">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider shadow-xs">
-                        <Zap className="w-3.5 h-3.5" /> Instant Assessment Portal
+                <div className="text-center space-y-3 flex flex-col items-center">
+                    <Link href="/">
+                        <AppLogo />
+                    </Link>
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider shadow-xs">
+                        <Zap className="w-3.5 h-3.5" /> Instant Candidate Join Portal
                     </div>
-                    <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-                        Join Assessment Room
-                    </h1>
                     <p className="text-xs text-muted-foreground">
-                        No account required. Enter code & student number to join live.
+                        No account required. Enter room code & student number to join live.
                     </p>
                 </div>
 
@@ -204,6 +206,10 @@ export default function JoinRoom({ initialCode = '', initialStudentId = '', erro
                         )}
                     </CardContent>
                 </Card>
+            </div>
+
+            <div className="w-full mt-8">
+                <AppFooter />
             </div>
         </div>
     );
