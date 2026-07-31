@@ -13,7 +13,10 @@ class EnsureSuperAdmin
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (! $request->user() || ! $request->user()->isSuperAdmin()) {
+        $user = $request->user();
+        $isImpersonating = session()->has('impersonator_id');
+
+        if (! $user || (! $user->isSuperAdmin() && ! $isImpersonating)) {
             abort(403, 'Unauthorized access to Super Admin Panel.');
         }
 
