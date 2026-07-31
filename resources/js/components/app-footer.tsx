@@ -1,4 +1,3 @@
-import AppearanceToggleDropdown from '@/components/appearance-dropdown';
 import AppLogo from '@/components/app-logo';
 import { Link } from '@inertiajs/react';
 import { ShieldCheck } from 'lucide-react';
@@ -35,7 +34,7 @@ export function AppFooter() {
                         <Link href="/reports" className="hover:text-foreground transition-colors">
                             Reports
                         </Link>
-                        <Link href="/join" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-extrabold transition-colors">
+                        <Link href="/join" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 font-extrabold transition-colors">
                             Student Join Portal
                         </Link>
                     </div>
@@ -48,15 +47,14 @@ export function AppFooter() {
                         </span>
                         <span className="hidden sm:inline">•</span>
                         <span className="flex items-center gap-1 font-semibold">
-                            <ShieldCheck className="w-3.5 h-3.5 text-primary" /> Strict Invigilation Security Enabled
+                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Strict Invigilation Security Enabled
                         </span>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div>
                         <span className="font-medium text-[11px]">
                             © {new Date().getFullYear()} <strong className="text-foreground font-black">K-EMS</strong>. All rights reserved.
                         </span>
-                        <AppearanceToggleDropdown />
                     </div>
                 </div>
             </div>

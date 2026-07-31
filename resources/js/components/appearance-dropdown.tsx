@@ -18,12 +18,12 @@ export default function AppearanceToggleDropdown({
                 onClick={() => updateAppearance('light')}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     appearance === 'light'
-                        ? 'bg-background text-amber-500 shadow-xs ring-1 ring-border'
+                        ? 'bg-background text-emerald-600 dark:text-emerald-400 shadow-xs ring-1 ring-emerald-500/30'
                         : 'text-muted-foreground hover:text-foreground'
                 }`}
                 title="Light Mode"
             >
-                <Sun className="h-3.5 w-3.5" />
+                <Sun className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span className="hidden sm:inline">Light</span>
             </button>
 
@@ -32,12 +32,12 @@ export default function AppearanceToggleDropdown({
                 onClick={() => updateAppearance('dark')}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     appearance === 'dark'
-                        ? 'bg-slate-900 text-indigo-400 shadow-xs ring-1 ring-indigo-500/30'
+                        ? 'bg-emerald-950/80 text-emerald-400 shadow-xs ring-1 ring-emerald-500/40 border border-emerald-500/30'
                         : 'text-muted-foreground hover:text-foreground'
                 }`}
                 title="Dark Mode"
             >
-                <Moon className="h-3.5 w-3.5" />
+                <Moon className="h-3.5 w-3.5 text-emerald-400" />
                 <span className="hidden sm:inline">Dark</span>
             </button>
 
@@ -46,12 +46,12 @@ export default function AppearanceToggleDropdown({
                 onClick={() => updateAppearance('system')}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     appearance === 'system'
-                        ? 'bg-background text-primary shadow-xs ring-1 ring-border'
+                        ? 'bg-background text-emerald-600 dark:text-emerald-400 shadow-xs ring-1 ring-emerald-500/30'
                         : 'text-muted-foreground hover:text-foreground'
                 }`}
                 title="System Mode"
             >
-                <Monitor className="h-3.5 w-3.5" />
+                <Monitor className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span className="hidden sm:inline">System</span>
             </button>
         </div>
