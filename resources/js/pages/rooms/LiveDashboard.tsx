@@ -85,11 +85,12 @@ export default function LiveDashboard({ room: initialRoom }: Props) {
                 const res = await fetch(`/api/rooms/${initialRoom.id}/live-data`);
                 if (res.ok) {
                     const data = await res.json();
+                    const newStatus = data.status || data.room?.status;
                     setRoom((prev) => ({
                         ...prev,
-                        status: data.status,
-                        current_question_index: data.current_question_index,
-                        participants: data.participants,
+                        status: newStatus || prev.status,
+                        current_question_index: data.current_question_index ?? data.room?.current_question_index ?? prev.current_question_index,
+                        participants: data.participants || prev.participants,
                     }));
                 }
             } catch (e) {

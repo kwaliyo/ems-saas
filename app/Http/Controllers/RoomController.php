@@ -138,6 +138,8 @@ class RoomController extends Controller
         $room->load(['participants.answers']);
 
         return response()->json([
+            'status' => $room->status,
+            'current_question_index' => $room->current_question_index,
             'room' => $room,
             'participants' => $room->participants,
         ]);
