@@ -189,15 +189,42 @@ export default function LiveDashboard({ room: initialRoom }: Props) {
                             {hideNames ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                             {hideNames ? 'Show Names' : 'Hide Names'}
                         </Button>
-                        <Button onClick={handleToggleLock} variant={room.status === 'paused' ? 'default' : 'outline'} className="text-xs font-bold gap-2 cursor-pointer">
-                            {room.status === 'paused' ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
-                            {room.status === 'paused' ? 'Resume Room' : 'Pause Room'}
-                        </Button>
-                        <Button variant="destructive" onClick={handleEndSession} className="font-bold text-xs gap-2 cursor-pointer shadow-xs">
-                            <StopCircle className="w-3.5 h-3.5" /> End Session
-                        </Button>
+                        {room.status !== 'completed' ? (
+                            <>
+                                <Button onClick={handleToggleLock} variant={room.status === 'paused' ? 'default' : 'outline'} className="text-xs font-bold gap-2 cursor-pointer">
+                                    {room.status === 'paused' ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+                                    {room.status === 'paused' ? 'Resume Room' : 'Pause Room'}
+                                </Button>
+                                <Button variant="destructive" onClick={handleEndSession} className="font-bold text-xs gap-2 cursor-pointer shadow-xs">
+                                    <StopCircle className="w-3.5 h-3.5" /> End Session
+                                </Button>
+                            </>
+                        ) : (
+                            <Link href={`/reports/${room.id}`}>
+                                <Button variant="default" className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs gap-2 cursor-pointer shadow-xs">
+                                    <CheckCircle2 className="w-4 h-4" /> Session Completed - View Report
+                                </Button>
+                            </Link>
+                        )}
                     </div>
                 </div>
+
+                {room.status === 'completed' && (
+                    <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0" />
+                            <div>
+                                <h3 className="text-sm font-black">Examination Room Session Completed</h3>
+                                <p className="text-xs font-semibold text-emerald-600/80 dark:text-emerald-400/80">This examination session has ended and candidate scorecards have been compiled.</p>
+                            </div>
+                        </div>
+                        <Link href={`/reports/${room.id}`}>
+                            <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer shadow-xs whitespace-nowrap">
+                                View Full Report
+                            </Button>
+                        </Link>
+                    </div>
+                )}
 
                 {room.mode === 'teacher_paced' && (
                     <Card className="bg-primary/10 border-primary/20 p-4 text-card-foreground min-w-0">
