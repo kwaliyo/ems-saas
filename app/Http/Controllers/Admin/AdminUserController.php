@@ -73,4 +73,42 @@ class AdminUserController extends Controller
             'type' => 'success',
         ]);
     }
+
+    public function impersonate(User $user): RedirectResponse
+    {
+        if ($user->id === auth()->id()) {
+            return back()->with('flash', [
+                'message' => 'You are already logged in as this user.',
+                'type' => 'error',
+            ]);
+        }
+
+        session(['impersonator_id' => auth()->id()]);
+        auth()->login($user);
+
+        return redirect()->route('dashboard')->with('flash', [
+            'message' => "Now impersonating {$user->name}.",
+            'type' => 'info',
+        ]);
+    }
+
+    public function stopImpersonating(): RedirectResponse
+    {
+        $impersonatorId = session('impersonator_id');
+
+        if ($impersonatorId) {
+            $admin = User::find($impersonatorId);
+            if ($admin) {
+                session()->forget('impersonator_id');
+                auth()->login($admin);
+
+                return redirect()->route('admin.dashboard')->with('flash', [
+                    'message' => 'Stopped impersonation and returned to Admin Panel.',
+                    'type' => 'success',
+                ]);
+            }
+        }
+
+        return redirect()->route('dashboard');
+    }
 }

@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Course;
 use App\Models\Room;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -71,5 +70,23 @@ class AdminDashboardTest extends TestCase
         $endResponse->assertRedirect();
 
         $this->assertEquals('completed', $room->fresh()->status);
+    }
+
+    public function test_super_admin_can_impersonate_instructor_and_exit_impersonation(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+        $instructor = User::factory()->create(['role' => 'instructor', 'name' => 'Dr. Smith']);
+
+        $impersonateResponse = $this->actingAs($admin)->post(route('admin.users.impersonate', $instructor));
+        $impersonateResponse->assertRedirect(route('dashboard'));
+
+        $this->assertEquals($instructor->id, auth()->id());
+        $this->assertEquals($admin->id, session('impersonator_id'));
+
+        $exitResponse = $this->post(route('admin.stop-impersonating'));
+        $exitResponse->assertRedirect(route('admin.dashboard'));
+
+        $this->assertEquals($admin->id, auth()->id());
+        $this->assertNull(session('impersonator_id'));
     }
 }

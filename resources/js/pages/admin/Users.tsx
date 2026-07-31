@@ -45,6 +45,12 @@ export default function AdminUsers({ users, filters }: Props) {
         }
     };
 
+    const handleImpersonateUser = (user: User) => {
+        if (confirm(`Login as ${user.name}? You can return to Admin Panel anytime.`)) {
+            router.post(`/admin/users/${user.id}/impersonate`);
+        }
+    };
+
     const handleDeleteUser = (user: User) => {
         if (confirm(`WARNING: Deleting user ${user.name} will delete all their courses, modules, and exam rooms. Continue?`)) {
             router.delete(`/admin/users/${user.id}`);
@@ -146,6 +152,14 @@ export default function AdminUsers({ users, filters }: Props) {
                                             {new Date(u.created_at).toLocaleDateString()}
                                         </td>
                                         <td className="p-3 text-right space-x-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleImpersonateUser(u)}
+                                                className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 font-bold text-[11px] cursor-pointer"
+                                                title="Log in as this Instructor"
+                                            >
+                                                Log in As
+                                            </button>
                                             <button
                                                 type="button"
                                                 onClick={() => handleToggleRole(u)}

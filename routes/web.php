@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminRoomController;
+use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\CourseController;
@@ -96,13 +99,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/reports/{room}/export-csv', [ReportController::class, 'exportCsv'])->name('reports.export-csv');
 
     // Super Admin System Monitoring & Management
+    Route::post('/admin/stop-impersonating', [AdminUserController::class, 'stopImpersonating'])->name('admin.stop-impersonating');
+
     Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
-        Route::get('/dashboard', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'index'])->name('dashboard');
-        Route::get('/users', [\App\Http\Controllers\Admin\AdminUserController::class, 'index'])->name('users.index');
-        Route::post('/users/{user}/toggle-role', [\App\Http\Controllers\Admin\AdminUserController::class, 'toggleRole'])->name('users.toggle-role');
-        Route::delete('/users/{user}', [\App\Http\Controllers\Admin\AdminUserController::class, 'destroy'])->name('users.destroy');
-        Route::get('/rooms', [\App\Http\Controllers\Admin\AdminRoomController::class, 'index'])->name('rooms.index');
-        Route::post('/rooms/{room}/end', [\App\Http\Controllers\Admin\AdminRoomController::class, 'endRoom'])->name('rooms.end');
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+        Route::post('/users/{user}/toggle-role', [AdminUserController::class, 'toggleRole'])->name('users.toggle-role');
+        Route::post('/users/{user}/impersonate', [AdminUserController::class, 'impersonate'])->name('users.impersonate');
+        Route::delete('/users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
+        Route::get('/rooms', [AdminRoomController::class, 'index'])->name('rooms.index');
+        Route::post('/rooms/{room}/end', [AdminRoomController::class, 'endRoom'])->name('rooms.end');
     });
 });
 

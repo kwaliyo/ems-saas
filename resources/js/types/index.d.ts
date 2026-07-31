@@ -3,6 +3,7 @@ import { LucideIcon } from 'lucide-react';
 
 export interface Auth {
     user: User;
+    is_impersonating?: boolean;
 }
 
 export interface BreadcrumbItem {
