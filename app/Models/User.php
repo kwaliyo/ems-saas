@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,7 +13,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
     /**
@@ -32,6 +33,8 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'subscription_plan',
+        'subscription_expires_at',
     ];
 
     /**
@@ -58,6 +61,7 @@ class User extends Authenticatable
             'date_of_birth' => 'date:Y-m-d',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'subscription_expires_at' => 'datetime',
         ];
     }
 
@@ -90,6 +94,7 @@ class User extends Authenticatable
             ->pluck('student_number')
             ->map(function ($num) use ($prefix) {
                 $suffix = str_replace($prefix, '', $num);
+
                 return is_numeric($suffix) ? (int) $suffix : 0;
             })
             ->filter();
@@ -97,7 +102,7 @@ class User extends Authenticatable
         $maxNumber = $existingNumbers->max() ?? 0;
         $nextSeq = $maxNumber + 1;
 
-        return $prefix . str_pad((string) $nextSeq, 4, '0', STR_PAD_LEFT);
+        return $prefix.str_pad((string) $nextSeq, 4, '0', STR_PAD_LEFT);
     }
 
     public static function generateNextExternalStudentNumber(string $rawPrefix = 'EXT'): string
@@ -110,6 +115,7 @@ class User extends Authenticatable
             ->pluck('student_number')
             ->map(function ($num) use ($tag) {
                 $suffix = str_replace($tag, '', $num);
+
                 return is_numeric($suffix) ? (int) $suffix : 0;
             })
             ->filter();
@@ -117,11 +123,30 @@ class User extends Authenticatable
         $maxNumber = $existingNumbers->max() ?? 0;
         $nextSeq = $maxNumber + 1;
 
-        return $tag . str_pad((string) $nextSeq, 4, '0', STR_PAD_LEFT);
+        return $tag.str_pad((string) $nextSeq, 4, '0', STR_PAD_LEFT);
     }
 
     public function isSuperAdmin(): bool
     {
         return $this->role === 'super_admin';
+    }
+
+    public function maxCandidateLimit(): int
+    {
+        return match ($this->subscription_plan) {
+            'pro' => 250,
+            'institution' => 999999,
+            default => 25,
+        };
+    }
+
+    public function isPro(): bool
+    {
+        return $this->subscription_plan === 'pro';
+    }
+
+    public function isInstitution(): bool
+    {
+        return $this->subscription_plan === 'institution';
     }
 }
