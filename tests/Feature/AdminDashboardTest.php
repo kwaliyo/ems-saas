@@ -89,4 +89,22 @@ class AdminDashboardTest extends TestCase
         $this->assertEquals($admin->id, auth()->id());
         $this->assertNull(session('impersonator_id'));
     }
+
+    public function test_super_admin_can_monitor_any_instructors_live_room_dashboard(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+        $instructor = User::factory()->create(['role' => 'instructor']);
+
+        $room = Room::create([
+            'user_id' => $instructor->id,
+            'assessment_title' => 'Chemistry Exam',
+            'assessment_subject' => 'CHM101',
+            'code' => 'MONITOR1',
+            'status' => 'active',
+            'mode' => 'exam',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('rooms.dashboard', $room));
+        $response->assertOk()->assertInertia(fn ($page) => $page->component('rooms/LiveDashboard'));
+    }
 }

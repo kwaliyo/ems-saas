@@ -73,7 +73,7 @@ class RoomController extends Controller
         if (! $assessment) {
             $assessment = $request->user()->assessments()->create([
                 'module_id' => $module->id,
-                'title' => ($module->code ? "[{$module->code}] " : '') . $module->title . ' Exam',
+                'title' => ($module->code ? "[{$module->code}] " : '').$module->title.' Exam',
                 'description' => $module->description,
                 'subject' => $module->course->title,
                 'settings' => [
@@ -210,8 +210,11 @@ class RoomController extends Controller
 
     private function authorizeOwner(Room $room): void
     {
-        if ($room->user_id !== auth()->id()) {
-            abort(403);
+        $user = auth()->user();
+        $isSuperAdmin = $user?->isSuperAdmin() || session()->has('impersonator_id');
+
+        if ($room->user_id !== auth()->id() && ! $isSuperAdmin) {
+            abort(403, 'Unauthorized access to this live room.');
         }
     }
 }

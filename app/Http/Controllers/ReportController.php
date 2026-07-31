@@ -66,7 +66,7 @@ class ReportController extends Controller
 
         $headers = [
             'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="assessment_report_' . $room->code . '.csv"',
+            'Content-Disposition' => 'attachment; filename="assessment_report_'.$room->code.'.csv"',
         ];
 
         $callback = function () use ($questions, $participants) {
@@ -75,12 +75,12 @@ class ReportController extends Controller
             // Header row
             $headerRow = ['Student Name', 'Student ID', 'Score', 'Total Questions', 'Percentage', 'Completed At'];
             foreach ($questions as $qIndex => $q) {
-                $headerRow[] = 'Q' . ($qIndex + 1) . ' Score';
+                $headerRow[] = 'Q'.($qIndex + 1).' Score';
             }
             fputcsv($file, $headerRow);
 
             foreach ($participants as $p) {
-                $pct = $p->total_questions > 0 ? round(($p->score / $p->total_questions) * 100, 1) . '%' : '0%';
+                $pct = $p->total_questions > 0 ? round(($p->score / $p->total_questions) * 100, 1).'%' : '0%';
                 $row = [
                     $p->name,
                     $p->student_id_code ?? 'N/A',
@@ -93,7 +93,7 @@ class ReportController extends Controller
                 $answersMap = $p->answers->keyBy('question_id');
                 foreach ($questions as $q) {
                     $ans = $answersMap->get($q->id);
-                    $row[] = $ans ? ($ans->is_correct ? 'Correct (' . $ans->score_awarded . ')' : 'Incorrect (0)') : 'Unanswered';
+                    $row[] = $ans ? ($ans->is_correct ? 'Correct ('.$ans->score_awarded.')' : 'Incorrect (0)') : 'Unanswered';
                 }
 
                 fputcsv($file, $row);
@@ -115,8 +115,11 @@ class ReportController extends Controller
 
     private function authorizeOwner(Room $room): void
     {
-        if ($room->user_id !== auth()->id()) {
-            abort(403);
+        $user = auth()->user();
+        $isSuperAdmin = $user?->isSuperAdmin() || session()->has('impersonator_id');
+
+        if ($room->user_id !== auth()->id() && ! $isSuperAdmin) {
+            abort(403, 'Unauthorized access to this report.');
         }
     }
 }
