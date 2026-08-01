@@ -78,30 +78,18 @@ class StudentController extends Controller
             }
         }
 
-        if ($user->isSuperAdmin()) {
-            $availableCourses = Course::latest()->get();
+        $availableCourses = Course::with('instructor')->latest()->get();
 
-            $students = User::where(function ($query) {
-                $query->whereHas('enrolledCourses')
+        $students = User::where('id', '!=', $user->id)
+            ->where(function ($query) {
+                $query->where('role', '!=', 'super_admin')
+                    ->orWhereHas('enrolledCourses')
                     ->orWhereNotNull('created_by_user_id')
-                    ->orWhere('role', 'student');
+                    ->orWhereNotNull('student_number');
             })
-                ->with(['enrolledCourses'])
-                ->latest()
-                ->get();
-        } else {
-            $availableCourses = Course::where('user_id', $instructorId)->latest()->get();
-
-            $students = User::where(function ($query) use ($instructorId) {
-                $query->whereHas('enrolledCourses', function ($q) use ($instructorId) {
-                    $q->where('courses.user_id', $instructorId);
-                })
-                    ->orWhere('created_by_user_id', $instructorId);
-            })
-                ->with(['enrolledCourses'])
-                ->latest()
-                ->get();
-        }
+            ->with(['enrolledCourses'])
+            ->latest()
+            ->get();
 
         return Inertia::render('students/Index', [
             'students' => $students,
