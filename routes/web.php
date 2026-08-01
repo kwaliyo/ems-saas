@@ -103,6 +103,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Instructor Subscription & Billing Settings
     Route::get('/settings/billing', [SubscriptionController::class, 'show'])->name('subscription.billing');
     Route::post('/settings/billing/upgrade', [SubscriptionController::class, 'upgrade'])->name('subscription.upgrade');
+    Route::post('/settings/billing/verify-paystack', [SubscriptionController::class, 'verifyPaystack'])->name('subscription.verify-paystack');
 
     // Super Admin System Monitoring & Management
     Route::post('/admin/stop-impersonating', [AdminUserController::class, 'stopImpersonating'])->name('admin.stop-impersonating');

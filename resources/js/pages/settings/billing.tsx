@@ -1,7 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
-import { type BreadcrumbItem } from '@/types';
-import { Head, router } from '@inertiajs/react';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     CheckCircle2,
     Crown,
@@ -10,6 +10,15 @@ import {
     Sparkles,
     Zap,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+declare global {
+    interface Window {
+        PaystackPop?: {
+            setup: (options: any) => { openIframe: () => void };
+        };
+    }
+}
 
 interface Plan {
     id: string;
@@ -29,6 +38,7 @@ interface Subscription {
 interface Props {
     subscription: Subscription;
     plans: Plan[];
+    paystack_public_key?: string;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -36,10 +46,55 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Subscription & Billing', href: '/settings/billing' },
 ];
 
-export default function SettingsBilling({ subscription, plans }: Props) {
+export default function SettingsBilling({ subscription, plans, paystack_public_key }: Props) {
+    const { auth } = usePage<SharedData>().props;
+    const [paystackLoaded, setPaystackLoaded] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && !window.PaystackPop) {
+            const script = document.createElement('script');
+            script.src = 'https://js.paystack.co/v1/inline.js';
+            script.async = true;
+            script.onload = () => setPaystackLoaded(true);
+            document.body.appendChild(script);
+        } else if (window.PaystackPop) {
+            setPaystackLoaded(true);
+        }
+    }, []);
+
     const handleUpgrade = (planId: string, planName: string) => {
-        if (confirm(`Switch your subscription plan to ${planName}?`)) {
-            router.post('/settings/billing/upgrade', { plan: planId });
+        if (planId === 'free') {
+            if (confirm(`Switch your subscription plan to Free Starter?`)) {
+                router.post('/settings/billing/upgrade', { plan: planId });
+            }
+            return;
+        }
+
+        const amountKobo = planId === 'pro' ? 1500000 : 9500000; // ₦15,000 or ₦95,000 in Kobo
+
+        if (paystack_public_key && window.PaystackPop) {
+            const handler = window.PaystackPop.setup({
+                key: paystack_public_key,
+                email: auth.user.email,
+                amount: amountKobo,
+                currency: 'NGN',
+                ref: 'KEMS-' + Math.floor(Math.random() * 1000000000 + 1),
+                callback: function (response: { reference: string }) {
+                    router.post('/settings/billing/verify-paystack', {
+                        reference: response.reference,
+                        plan: planId,
+                    });
+                },
+                onClose: function () {
+                    // Paystack popup closed
+                },
+            });
+            handler.openIframe();
+        } else {
+            // Direct upgrade fallback if Paystack public key is not set
+            if (confirm(`Switch your subscription plan to ${planName}?`)) {
+                router.post('/settings/billing/upgrade', { plan: planId });
+            }
         }
     };
 
