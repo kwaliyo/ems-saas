@@ -33,6 +33,7 @@ class RoomController extends Controller
             'shuffle_questions' => 'boolean',
             'shuffle_answers' => 'boolean',
             'show_feedback' => 'boolean',
+            'allow_guests' => 'boolean',
         ]);
 
         $durationMinutes = $validated['duration_minutes']
@@ -53,6 +54,7 @@ class RoomController extends Controller
                 'shuffle_questions' => $validated['shuffle_questions'] ?? false,
                 'shuffle_answers' => $validated['shuffle_answers'] ?? false,
                 'show_feedback' => $validated['show_feedback'] ?? true,
+                'allow_guests' => $request->boolean('allow_guests', true),
             ],
             'questions_snapshot' => $assessment->questions()->with('options')->get()->toArray(),
             'started_at' => now(),
@@ -71,6 +73,7 @@ class RoomController extends Controller
             'shuffle_questions' => 'boolean',
             'shuffle_answers' => 'boolean',
             'show_feedback' => 'boolean',
+            'allow_guests' => 'boolean',
         ]);
 
         // Create an assessment container ONLY upon launching live room!
@@ -112,6 +115,7 @@ class RoomController extends Controller
                 'shuffle_questions' => $validated['shuffle_questions'] ?? false,
                 'shuffle_answers' => $validated['shuffle_answers'] ?? false,
                 'show_feedback' => $validated['show_feedback'] ?? false,
+                'allow_guests' => $request->boolean('allow_guests', true),
                 'allow_retake' => (bool) $module->allow_retake,
                 'allow_review' => (bool) $module->allow_review,
                 'hide_score' => (bool) $module->hide_score,

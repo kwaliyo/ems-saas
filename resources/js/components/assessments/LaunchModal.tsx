@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useForm } from '@inertiajs/react';
-import { CheckCircle2, Clock, Play, Sparkles, UserCheck } from 'lucide-react';
+import { CheckCircle2, Clock, Lock, Play, Sparkles, UserCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface Assessment {
@@ -42,6 +42,7 @@ export default function LaunchModal({ assessment, module, isOpen, onClose }: Pro
         shuffle_questions: false,
         shuffle_answers: false,
         show_feedback: false,
+        allow_guests: false,
     });
 
     useEffect(() => {
@@ -158,6 +159,27 @@ export default function LaunchModal({ assessment, module, isOpen, onClose }: Pro
                             </div>
                         </div>
                     ) : null}
+
+                    {/* Access & Guest Protection Toggle */}
+                    <div className="p-3.5 rounded-xl bg-muted/50 border border-border space-y-2">
+                        <div className="flex items-center justify-between cursor-pointer">
+                            <div className="space-y-0.5">
+                                <Label htmlFor="allow_guests" className="text-xs font-bold text-foreground cursor-pointer flex items-center gap-1.5">
+                                    <Lock className="w-3.5 h-3.5 text-primary" /> Allow Guest Candidates (EXT-*)
+                                </Label>
+                                <p className="text-[10px] text-muted-foreground">
+                                    When disabled, guest IDs (EXT-*) are blocked and only registered enrolled students can join.
+                                </p>
+                            </div>
+                            <input
+                                id="allow_guests"
+                                type="checkbox"
+                                checked={data.allow_guests}
+                                onChange={(e) => setData('allow_guests', e.target.checked)}
+                                className="w-4 h-4 rounded border-input text-primary focus:ring-primary cursor-pointer shrink-0"
+                            />
+                        </div>
+                    </div>
 
                     {/* Action Controls */}
                     <div className="flex items-center justify-end gap-3 pt-2">
