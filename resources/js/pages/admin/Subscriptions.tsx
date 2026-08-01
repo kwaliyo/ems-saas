@@ -87,10 +87,10 @@ export default function AdminSubscriptions({ metrics, subscribers, filters }: Pr
                         </div>
                         <div>
                             <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
-                                ${metrics.estimated_mrr.toLocaleString()}
+                                ₦{metrics.estimated_mrr.toLocaleString()}
                             </div>
                             <p className="text-[11px] text-muted-foreground font-semibold mt-1">
-                                Monthly Recurring Revenue
+                                Monthly Recurring Revenue (NGN)
                             </p>
                         </div>
                     </div>
@@ -99,7 +99,7 @@ export default function AdminSubscriptions({ metrics, subscribers, filters }: Pr
                     <div className="p-5 rounded-2xl bg-card border border-border/80 shadow-xs space-y-3">
                         <div className="flex items-center justify-between">
                             <span className="text-xs font-extrabold uppercase text-muted-foreground tracking-wider">
-                                Pro Educators ($29/mo)
+                                Pro Educators (₦15,000/mo)
                             </span>
                             <div className="w-9 h-9 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
                                 <Sparkles className="w-5 h-5" />
@@ -119,7 +119,7 @@ export default function AdminSubscriptions({ metrics, subscribers, filters }: Pr
                     <div className="p-5 rounded-2xl bg-card border border-border/80 shadow-xs space-y-3">
                         <div className="flex items-center justify-between">
                             <span className="text-xs font-extrabold uppercase text-muted-foreground tracking-wider">
-                                Institutions ($199/mo)
+                                Institutions (₦95,000/mo)
                             </span>
                             <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
                                 <Crown className="w-5 h-5" />
@@ -216,12 +216,12 @@ export default function AdminSubscriptions({ metrics, subscribers, filters }: Pr
                                             <td className="p-3">
                                                 {currentPlan === 'institution' && (
                                                     <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-                                                        👑 Institution ($199)
+                                                        👑 Institution (₦95,000)
                                                     </span>
                                                 )}
                                                 {currentPlan === 'pro' && (
                                                     <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                                                        ✨ Pro ($29)
+                                                        ✨ Pro (₦15,000)
                                                     </span>
                                                 )}
                                                 {currentPlan === 'free' && (
@@ -242,9 +242,9 @@ export default function AdminSubscriptions({ metrics, subscribers, filters }: Pr
                                                     onChange={(e) => handleUpdatePlan(u.id, u.name, e.target.value)}
                                                     className="px-2.5 py-1 rounded-lg border border-border bg-background text-foreground font-bold text-[11px] focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
                                                 >
-                                                    <option value="free">Free ($0)</option>
-                                                    <option value="pro">Pro ($29/mo)</option>
-                                                    <option value="institution">Institution ($199/mo)</option>
+                                                    <option value="free">Free (₦0)</option>
+                                                    <option value="pro">Pro (₦15,000/mo)</option>
+                                                    <option value="institution">Institution (₦95,000/mo)</option>
                                                 </select>
                                             </td>
                                         </tr>

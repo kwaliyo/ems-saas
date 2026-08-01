@@ -20,8 +20,8 @@ class AdminSubscriptionController extends Controller
         $proCount = User::where('subscription_plan', 'pro')->count();
         $institutionCount = User::where('subscription_plan', 'institution')->count();
 
-        // Calculate Estimated MRR (Pro = $29, Institution = $199)
-        $estimatedMrr = ($proCount * 29) + ($institutionCount * 199);
+        // Calculate Estimated MRR in NGN (Pro = ₦15,000, Institution = ₦95,000)
+        $estimatedMrr = ($proCount * 15000) + ($institutionCount * 95000);
 
         $query = User::query();
 

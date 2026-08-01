@@ -23,7 +23,7 @@ class SubscriptionController extends Controller
                 [
                     'id' => 'free',
                     'name' => 'Free Starter',
-                    'price' => '$0',
+                    'price' => '₦0',
                     'period' => 'Forever Free',
                     'max_candidates' => 25,
                     'features' => [
@@ -36,7 +36,7 @@ class SubscriptionController extends Controller
                 [
                     'id' => 'pro',
                     'name' => 'Pro Educator',
-                    'price' => '$29',
+                    'price' => '₦15,000',
                     'period' => '/ month',
                     'max_candidates' => 250,
                     'features' => [
@@ -51,7 +51,7 @@ class SubscriptionController extends Controller
                 [
                     'id' => 'institution',
                     'name' => 'Institution / College',
-                    'price' => '$199',
+                    'price' => '₦95,000',
                     'period' => '/ month',
                     'max_candidates' => 999999,
                     'features' => [
