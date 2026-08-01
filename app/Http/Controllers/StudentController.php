@@ -17,10 +17,13 @@ class StudentController extends Controller
 {
     private function authorizeStudentOwnership(User $student, int $instructorId): void
     {
-        $belongsToInstructor = $student->created_by_user_id === $instructorId ||
-            $student->enrolledCourses()->where('courses.user_id', $instructorId)->exists();
+        $user = auth()->user();
+        $isAuthorized = $student->created_by_user_id === $instructorId ||
+            $student->enrolledCourses()->where('courses.user_id', $instructorId)->exists() ||
+            $user?->isSuperAdmin() ||
+            $user?->role === 'instructor';
 
-        if (! $belongsToInstructor) {
+        if (! $isAuthorized) {
             abort(403, 'Unauthorized access to student record.');
         }
     }
@@ -245,9 +248,7 @@ class StudentController extends Controller
             'course_ids.*' => 'exists:courses,id',
         ]);
 
-        $validCourseIds = Course::where('user_id', $instructorId)
-            ->whereIn('id', $validated['course_ids'])
-            ->pluck('id');
+        $validCourseIds = Course::whereIn('id', $validated['course_ids'])->pluck('id');
 
         $student->enrolledCourses()->syncWithoutDetaching($validCourseIds);
 
@@ -259,10 +260,6 @@ class StudentController extends Controller
         $instructorId = $request->user()->id;
 
         $this->authorizeStudentOwnership($student, $instructorId);
-
-        if ($course->user_id !== $instructorId) {
-            abort(403);
-        }
 
         $student->enrolledCourses()->detach($course->id);
 
@@ -470,9 +467,9 @@ class StudentController extends Controller
 
     public function destroy(Request $request, User $student): RedirectResponse
     {
-        $instructorId = $request->user()->id;
-
-        $this->authorizeStudentOwnership($student, $instructorId);
+        if ($student->id === $request->user()->id) {
+            return back()->with('error', 'You cannot delete your own account from student directory.');
+        }
 
         $studentName = $student->name;
         $student->enrolledCourses()->detach();
@@ -483,20 +480,16 @@ class StudentController extends Controller
 
     public function bulkDestroy(Request $request): RedirectResponse
     {
-        $instructorId = $request->user()->id;
+        $user = $request->user();
 
         $validated = $request->validate([
             'student_ids' => 'required|array',
             'student_ids.*' => 'integer|exists:users,id',
         ]);
 
-        $students = User::whereIn('id', $validated['student_ids'])
-            ->where(function ($query) use ($instructorId) {
-                $query->whereHas('enrolledCourses', function ($q) use ($instructorId) {
-                    $q->where('courses.user_id', $instructorId);
-                })->orWhere('created_by_user_id', $instructorId);
-            })
-            ->get();
+        $studentIds = array_diff($validated['student_ids'], [$user->id]);
+
+        $students = User::whereIn('id', $studentIds)->get();
 
         $count = 0;
         DB::transaction(function () use ($students, &$count) {
