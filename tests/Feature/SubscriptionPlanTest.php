@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Mail\SubscriptionReceiptMail;
 use App\Models\Room;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class SubscriptionPlanTest extends TestCase
@@ -107,5 +109,19 @@ class SubscriptionPlanTest extends TestCase
         $updateResponse->assertRedirect();
 
         $this->assertEquals('institution', $instructor->fresh()->subscription_plan);
+    }
+
+    public function test_user_receives_subscription_receipt_email_on_upgrade(): void
+    {
+        Mail::fake();
+
+        $instructor = User::factory()->create(['role' => 'instructor', 'subscription_plan' => 'free']);
+
+        $response = $this->actingAs($instructor)->post(route('subscription.upgrade'), ['plan' => 'pro']);
+        $response->assertRedirect();
+
+        Mail::assertSent(SubscriptionReceiptMail::class, function ($mail) use ($instructor) {
+            return $mail->hasTo($instructor->email) && $mail->plan === 'pro' && $mail->amount === '₦15,000';
+        });
     }
 }

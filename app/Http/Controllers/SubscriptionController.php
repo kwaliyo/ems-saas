@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\SubscriptionReceiptMail;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -78,14 +82,17 @@ class SubscriptionController extends Controller
             'plan' => ['required', 'string', 'in:free,pro,institution'],
         ]);
 
+        $plan = $request->input('plan');
         $user = $request->user();
         $user->update([
-            'subscription_plan' => $request->input('plan'),
-            'subscription_expires_at' => $request->input('plan') === 'free' ? null : now()->addMonth(),
+            'subscription_plan' => $plan,
+            'subscription_expires_at' => $plan === 'free' ? null : now()->addMonth(),
         ]);
 
+        $this->sendReceiptMail($user, $plan);
+
         return back()->with('flash', [
-            'message' => 'Successfully updated your subscription plan to '.ucfirst($user->subscription_plan).'.',
+            'message' => 'Successfully updated your subscription plan to '.ucfirst($user->subscription_plan).'. Receipt sent to '.$user->email.'.',
             'type' => 'success',
         ]);
     }
@@ -159,15 +166,17 @@ class SubscriptionController extends Controller
                             'subscription_plan' => $plan,
                             'subscription_expires_at' => now()->addMonth(),
                         ]);
+
+                        $this->sendReceiptMail($user, $plan, $reference);
                     }
 
                     return redirect()->route('subscription.billing')->with('flash', [
-                        'message' => 'Payment successful! Your subscription has been upgraded to '.ucfirst($plan).'.',
+                        'message' => 'Payment successful! Receipt sent to '.$user->email.'.',
                         'type' => 'success',
                     ]);
                 }
             } catch (\Exception $e) {
-                // Ignore exception and fallback to return with error
+                // Ignore exception
             }
         }
 
@@ -201,13 +210,15 @@ class SubscriptionController extends Controller
                         'subscription_expires_at' => now()->addMonth(),
                     ]);
 
+                    $this->sendReceiptMail($user, $plan, $reference);
+
                     return back()->with('flash', [
-                        'message' => 'Payment verified! Your plan has been upgraded to '.ucfirst($plan).'.',
+                        'message' => 'Payment verified! Subscription receipt sent to '.$user->email.'.',
                         'type' => 'success',
                     ]);
                 }
             } catch (\Exception $e) {
-                // Fallthrough if network issue
+                // Fallthrough
             }
         }
 
@@ -218,9 +229,44 @@ class SubscriptionController extends Controller
             'subscription_expires_at' => now()->addMonth(),
         ]);
 
+        $this->sendReceiptMail($user, $plan, $reference);
+
         return back()->with('flash', [
-            'message' => 'Subscription plan updated to '.ucfirst($plan).'.',
+            'message' => 'Subscription plan updated to '.ucfirst($plan).'. Receipt sent to '.$user->email.'.',
             'type' => 'success',
         ]);
+    }
+
+    private function sendReceiptMail(User $user, string $plan, ?string $reference = null): void
+    {
+        try {
+            $amount = match ($plan) {
+                'pro' => '₦15,000',
+                'institution' => '₦95,000',
+                default => '₦0 (Free)',
+            };
+
+            $seatLimit = match ($plan) {
+                'pro' => '250 candidate seats / live room',
+                'institution' => 'Unlimited candidate seats',
+                default => '25 candidate seats / live room',
+            };
+
+            $ref = $reference ?? ('INV-'.strtoupper(uniqid()));
+            $paymentDate = now()->format('F j, Y, g:i a');
+            $expiresAt = $plan === 'free' ? 'Forever Free' : now()->addMonth()->format('F j, Y');
+
+            Mail::to($user->email)->send(new SubscriptionReceiptMail(
+                user: $user,
+                plan: $plan,
+                amount: $amount,
+                reference: $ref,
+                seatLimit: $seatLimit,
+                paymentDate: $paymentDate,
+                expiresAt: $expiresAt
+            ));
+        } catch (\Exception $e) {
+            Log::warning('Subscription receipt email could not be sent: '.$e->getMessage());
+        }
     }
 }
