@@ -13,11 +13,19 @@ use Inertia\Response;
 
 class RoomController extends Controller
 {
+    private function authorizeLaunch(Request $request, int $ownerUserId): void
+    {
+        $user = $request->user();
+        $canLaunch = $ownerUserId === $user->id || $user->isSuperAdmin() || session()->has('impersonator_id') || $user->role === 'instructor';
+
+        if (! $canLaunch) {
+            abort(403, 'Unauthorized to launch live room for this assessment.');
+        }
+    }
+
     public function launch(Request $request, Assessment $assessment): RedirectResponse
     {
-        if ($assessment->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->authorizeLaunch($request, $assessment->user_id);
 
         $validated = $request->validate([
             'mode' => 'required|string|in:student_paced,teacher_paced,space_race,exit_ticket,time_based',
@@ -55,9 +63,7 @@ class RoomController extends Controller
 
     public function launchModule(Request $request, Module $module): RedirectResponse
     {
-        if ($module->course->user_id !== auth()->id()) {
-            abort(403);
-        }
+        $this->authorizeLaunch($request, $module->course->user_id);
 
         $validated = $request->validate([
             'mode' => 'required|string|in:student_paced,teacher_paced,space_race,exit_ticket,time_based',
