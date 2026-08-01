@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useForm } from '@inertiajs/react';
-import { CheckCircle2, Clock, Layers, Play, Rocket, Sparkles, UserCheck } from 'lucide-react';
+import { CheckCircle2, Clock, Play, Sparkles, UserCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface Assessment {
@@ -31,7 +31,7 @@ interface Props {
 }
 
 export default function LaunchModal({ assessment, module, isOpen, onClose }: Props) {
-    const [selectedMode, setSelectedMode] = useState<'time_based' | 'student_paced' | 'teacher_paced' | 'space_race' | 'exit_ticket'>('time_based');
+    const [selectedMode, setSelectedMode] = useState<'time_based' | 'student_paced'>('time_based');
 
     const duration = module?.exam_duration_minutes || assessment?.module?.exam_duration_minutes || 60;
     const title = module ? `${module.code ? `[${module.code}] ` : ''}${module.title} Exam` : assessment?.title || 'Assessment';
@@ -125,48 +125,6 @@ export default function LaunchModal({ assessment, module, isOpen, onClose }: Pro
                                 </div>
                                 <div className="font-bold text-xs text-foreground">Student-Paced</div>
                                 <div className="text-[10px] text-muted-foreground">Untimed exam. Students answer at their own speed.</div>
-                            </button>
-
-                            {/* Teacher-Paced Mode */}
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setSelectedMode('teacher_paced');
-                                    setData('mode', 'teacher_paced');
-                                }}
-                                className={`p-3.5 rounded-xl border text-left space-y-1 transition-all cursor-pointer relative ${
-                                    selectedMode === 'teacher_paced'
-                                        ? 'bg-primary/10 border-primary text-primary ring-1 ring-primary font-bold shadow-xs'
-                                        : 'bg-muted/50 border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
-                                }`}
-                            >
-                                <div className="flex items-center justify-between">
-                                    <Layers className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                                    {selectedMode === 'teacher_paced' && <CheckCircle2 className="w-4 h-4 text-primary" />}
-                                </div>
-                                <div className="font-bold text-xs text-foreground">Teacher-Paced</div>
-                                <div className="text-[10px] text-muted-foreground">Instructor controls question progression.</div>
-                            </button>
-
-                            {/* Space Race Mode */}
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setSelectedMode('space_race');
-                                    setData('mode', 'space_race');
-                                }}
-                                className={`p-3.5 rounded-xl border text-left space-y-1 transition-all cursor-pointer relative ${
-                                    selectedMode === 'space_race'
-                                        ? 'bg-primary/10 border-primary text-primary ring-1 ring-primary font-bold shadow-xs'
-                                        : 'bg-muted/50 border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
-                                }`}
-                            >
-                                <div className="flex items-center justify-between">
-                                    <Rocket className="w-5 h-5 text-rose-600 dark:text-rose-400" />
-                                    {selectedMode === 'space_race' && <CheckCircle2 className="w-4 h-4 text-primary" />}
-                                </div>
-                                <div className="font-bold text-xs text-foreground">Space Race</div>
-                                <div className="text-[10px] text-muted-foreground">Gamified competitive team race mode.</div>
                             </button>
                         </div>
                     </div>
