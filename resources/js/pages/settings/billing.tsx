@@ -14,9 +14,7 @@ import { useEffect, useState } from 'react';
 
 declare global {
     interface Window {
-        PaystackPop?: {
-            setup: (options: any) => { openIframe: () => void };
-        };
+        PaystackPop?: any;
     }
 }
 
@@ -39,6 +37,7 @@ interface Props {
     subscription: Subscription;
     plans: Plan[];
     paystack_public_key?: string;
+    has_paystack_keys?: boolean;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -46,7 +45,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Subscription & Billing', href: '/settings/billing' },
 ];
 
-export default function SettingsBilling({ subscription, plans, paystack_public_key }: Props) {
+export default function SettingsBilling({ subscription, plans, paystack_public_key, has_paystack_keys }: Props) {
     const { auth } = usePage<SharedData>().props;
     const [paystackLoaded, setPaystackLoaded] = useState(false);
 
@@ -57,7 +56,7 @@ export default function SettingsBilling({ subscription, plans, paystack_public_k
             script.async = true;
             script.onload = () => setPaystackLoaded(true);
             document.body.appendChild(script);
-        } else if (window.PaystackPop) {
+        } else if (typeof window !== 'undefined' && window.PaystackPop) {
             setPaystackLoaded(true);
         }
     }, []);
@@ -72,30 +71,57 @@ export default function SettingsBilling({ subscription, plans, paystack_public_k
 
         const amountKobo = planId === 'pro' ? 1500000 : 9500000; // ₦15,000 or ₦95,000 in Kobo
 
-        if (paystack_public_key && window.PaystackPop) {
-            const handler = window.PaystackPop.setup({
-                key: paystack_public_key,
-                email: auth.user.email,
-                amount: amountKobo,
-                currency: 'NGN',
-                ref: 'KEMS-' + Math.floor(Math.random() * 1000000000 + 1),
-                callback: function (response: { reference: string }) {
-                    router.post('/settings/billing/verify-paystack', {
-                        reference: response.reference,
-                        plan: planId,
+        // 1. Attempt Paystack Pop-up Checkout if public key is available
+        if (paystack_public_key && typeof window !== 'undefined' && window.PaystackPop) {
+            try {
+                if (typeof window.PaystackPop === 'function') {
+                    const paystack = new window.PaystackPop();
+                    paystack.newTransaction({
+                        key: paystack_public_key,
+                        email: auth.user.email,
+                        amount: amountKobo,
+                        currency: 'NGN',
+                        ref: 'KEMS-' + Math.floor(Math.random() * 1000000000 + 1),
+                        onSuccess: (transaction: any) => {
+                            router.post('/settings/billing/verify-paystack', {
+                                reference: transaction.reference || transaction.trxref,
+                                plan: planId,
+                            });
+                        },
+                        onCancel: () => {
+                            // Popup closed
+                        },
                     });
-                },
-                onClose: function () {
-                    // Paystack popup closed
-                },
-            });
-            handler.openIframe();
-        } else {
-            // Direct upgrade fallback if Paystack public key is not set
-            if (confirm(`Switch your subscription plan to ${planName}?`)) {
-                router.post('/settings/billing/upgrade', { plan: planId });
+                    return;
+                }
+
+                if (window.PaystackPop.setup) {
+                    const handler = window.PaystackPop.setup({
+                        key: paystack_public_key,
+                        email: auth.user.email,
+                        amount: amountKobo,
+                        currency: 'NGN',
+                        ref: 'KEMS-' + Math.floor(Math.random() * 1000000000 + 1),
+                        callback: function (response: { reference: string }) {
+                            router.post('/settings/billing/verify-paystack', {
+                                reference: response.reference,
+                                plan: planId,
+                            });
+                        },
+                        onClose: function () {
+                            // Popup closed
+                        },
+                    });
+                    handler.openIframe();
+                    return;
+                }
+            } catch (err) {
+                console.error('Paystack popup error:', err);
             }
         }
+
+        // 2. Fallback to Backend Paystack Checkout initialization
+        router.post('/settings/billing/paystack-init', { plan: planId });
     };
 
     return (

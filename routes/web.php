@@ -103,6 +103,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Instructor Subscription & Billing Settings
     Route::get('/settings/billing', [SubscriptionController::class, 'show'])->name('subscription.billing');
     Route::post('/settings/billing/upgrade', [SubscriptionController::class, 'upgrade'])->name('subscription.upgrade');
+    Route::post('/settings/billing/paystack-init', [SubscriptionController::class, 'initPaystack'])->name('subscription.paystack.init');
+    Route::get('/settings/billing/paystack-callback', [SubscriptionController::class, 'paystackCallback'])->name('subscription.paystack.callback');
     Route::post('/settings/billing/verify-paystack', [SubscriptionController::class, 'verifyPaystack'])->name('subscription.verify-paystack');
 
     // Super Admin System Monitoring & Management
