@@ -75,6 +75,9 @@ export default function Welcome({
                             <a href="#how-it-works" className="hover:text-foreground transition-colors">
                                 How It Works
                             </a>
+                            <a href="#pricing" className="hover:text-foreground transition-colors text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center gap-1">
+                                Pricing
+                            </a>
                             <a href="#student-access" className="hover:text-foreground transition-colors">
                                 Student Join
                             </a>
@@ -157,6 +160,13 @@ export default function Welcome({
                                     className="flex items-center gap-2 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
                                 >
                                     <Clock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> How It Works
+                                </a>
+                                <a
+                                    href="#pricing"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className="flex items-center gap-2 p-2 rounded-lg font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 transition-colors"
+                                >
+                                    <Zap className="w-4 h-4 text-emerald-500" /> Pricing & Plans
                                 </a>
                                 <a
                                     href="#student-access"
