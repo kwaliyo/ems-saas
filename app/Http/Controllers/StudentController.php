@@ -21,7 +21,7 @@ class StudentController extends Controller
         $isAuthorized = $student->created_by_user_id === $instructorId ||
             $student->enrolledCourses()->where('courses.user_id', $instructorId)->exists() ||
             $user?->isSuperAdmin() ||
-            $user?->role === 'instructor';
+            $user?->role === 'super_admin';
 
         if (! $isAuthorized) {
             abort(403, 'Unauthorized access to student record.');
@@ -32,9 +32,10 @@ class StudentController extends Controller
     {
         $user = $request->user();
         $instructorId = $user->id;
+        $isSuperAdmin = $user->isSuperAdmin() || $user->role === 'super_admin';
 
         // Auto-sync room participants into student records & course enrollments
-        $rooms = $user->isSuperAdmin()
+        $rooms = $isSuperAdmin
             ? Room::with(['assessment.module.course'])->get()
             : Room::where('user_id', $instructorId)->with(['assessment.module.course'])->get();
 
@@ -81,18 +82,35 @@ class StudentController extends Controller
             }
         }
 
-        $availableCourses = Course::with('instructor')->latest()->get();
+        if ($isSuperAdmin) {
+            $availableCourses = Course::with('instructor')->latest()->get();
 
-        $students = User::where('id', '!=', $user->id)
-            ->where(function ($query) {
-                $query->where('role', '!=', 'super_admin')
-                    ->orWhereHas('enrolledCourses')
-                    ->orWhereNotNull('created_by_user_id')
-                    ->orWhereNotNull('student_number');
-            })
-            ->with(['enrolledCourses'])
-            ->latest()
-            ->get();
+            $students = User::where('id', '!=', $user->id)
+                ->where(function ($query) {
+                    $query->where('role', '!=', 'super_admin')
+                        ->orWhereHas('enrolledCourses')
+                        ->orWhereNotNull('created_by_user_id')
+                        ->orWhereNotNull('student_number');
+                })
+                ->with(['enrolledCourses'])
+                ->latest()
+                ->get();
+        } else {
+            $availableCourses = Course::where('user_id', $instructorId)->with('instructor')->latest()->get();
+            $instructorCourseIds = $availableCourses->pluck('id')->toArray();
+
+            $students = User::where('id', '!=', $user->id)
+                ->where('role', '!=', 'super_admin')
+                ->where(function ($query) use ($instructorId, $instructorCourseIds) {
+                    $query->where('created_by_user_id', $instructorId)
+                        ->orWhereHas('enrolledCourses', function ($cq) use ($instructorCourseIds) {
+                            $cq->whereIn('courses.id', $instructorCourseIds);
+                        });
+                })
+                ->with(['enrolledCourses'])
+                ->latest()
+                ->get();
+        }
 
         return Inertia::render('students/Index', [
             'students' => $students,
