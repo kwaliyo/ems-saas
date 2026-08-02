@@ -29,6 +29,7 @@ import { useState } from 'react';
 import AppearanceToggleDropdown from '@/components/appearance-dropdown';
 import { AppFooter } from '@/components/app-footer';
 import AppLogo from '@/components/app-logo';
+import { SystemAnnouncement } from '@/components/system-announcement';
 
 export default function Welcome({
     canRegister = true,
@@ -59,6 +60,7 @@ export default function Welcome({
             </Head>
 
             <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary selection:text-primary-foreground">
+                <SystemAnnouncement />
                 {/* Navbar */}
                 <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-background/95 backdrop-blur-md">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">

@@ -47,6 +47,14 @@ class HandleInertiaRequests extends Middleware
                 'is_impersonating' => session()->has('impersonator_id'),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'announcement' => [
+                'enabled' => (bool) env('SYSTEM_ANNOUNCEMENT_ENABLED', true),
+                'id' => env('SYSTEM_ANNOUNCEMENT_ID', 'ann-2026-08-01'),
+                'message' => env('SYSTEM_ANNOUNCEMENT_MESSAGE', '📢 System Notice: Real-time exam synchronization & candidate portals operating at 100% capacity.'),
+                'type' => env('SYSTEM_ANNOUNCEMENT_TYPE', 'info'),
+                'link_text' => env('SYSTEM_ANNOUNCEMENT_LINK_TEXT', null),
+                'link_url' => env('SYSTEM_ANNOUNCEMENT_LINK_URL', null),
+            ],
         ];
     }
 }

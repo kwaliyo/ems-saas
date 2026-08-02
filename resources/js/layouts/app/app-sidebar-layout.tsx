@@ -3,6 +3,7 @@ import { AppFooter } from '@/components/app-footer';
 import { AppShell } from '@/components/app-shell';
 import { AppSidebar } from '@/components/app-sidebar';
 import { AppSidebarHeader } from '@/components/app-sidebar-header';
+import { SystemAnnouncement } from '@/components/system-announcement';
 import { type BreadcrumbItem } from '@/types';
 import { type PropsWithChildren } from 'react';
 
@@ -14,6 +15,7 @@ export default function AppSidebarLayout({
         <AppShell variant="sidebar">
             <AppSidebar />
             <AppContent variant="sidebar" className="overflow-x-hidden flex flex-col min-h-screen">
+                <SystemAnnouncement />
                 <AppSidebarHeader breadcrumbs={breadcrumbs} />
                 <div className="flex-1">
                     {children}
