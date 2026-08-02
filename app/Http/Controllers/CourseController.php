@@ -13,16 +13,35 @@ use Inertia\Response;
 
 class CourseController extends Controller
 {
+    private function authorizeCourseManagement(Course $course, User $user): void
+    {
+        $canManage = $course->user_id === $user->id || $user->isSuperAdmin() || $user->role === 'instructor';
+        if (! $canManage) {
+            abort(403, 'Unauthorized access to course management.');
+        }
+    }
+
     public function index(Request $request): Response
     {
         $user = $request->user();
 
-        // Taught courses by instructor
+        // Taught courses created by this instructor
         $taughtCourses = $user->taughtCourses()
             ->withCount(['modules', 'students'])
             ->with(['modules.assessments.rooms'])
             ->latest()
             ->get();
+
+        // All courses in the institution directory
+        $allCourses = Course::with('instructor')
+            ->withCount(['modules', 'students'])
+            ->with(['modules.assessments.rooms'])
+            ->latest()
+            ->get();
+
+        if ($user->isSuperAdmin() || $taughtCourses->isEmpty() || $user->role === 'instructor') {
+            $taughtCourses = $allCourses;
+        }
 
         // Enrolled courses as a student
         $enrolledCourses = $user->enrolledCourses()
@@ -105,9 +124,7 @@ class CourseController extends Controller
 
     public function addModule(Request $request, Course $course): RedirectResponse
     {
-        if ($course->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->authorizeCourseManagement($course, $request->user());
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -137,7 +154,8 @@ class CourseController extends Controller
 
     public function updateModule(Request $request, Course $course, Module $module): RedirectResponse
     {
-        if ($course->user_id !== $request->user()->id || $module->course_id !== $course->id) {
+        $this->authorizeCourseManagement($course, $request->user());
+        if ($module->course_id !== $course->id) {
             abort(403);
         }
 
@@ -168,7 +186,8 @@ class CourseController extends Controller
 
     public function destroyModule(Request $request, Course $course, Module $module): RedirectResponse
     {
-        if ($course->user_id !== $request->user()->id || $module->course_id !== $course->id) {
+        $this->authorizeCourseManagement($course, $request->user());
+        if ($module->course_id !== $course->id) {
             abort(403);
         }
 
@@ -179,9 +198,7 @@ class CourseController extends Controller
 
     public function enrollStudent(Request $request, Course $course): RedirectResponse
     {
-        if ($course->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->authorizeCourseManagement($course, $request->user());
 
         $validated = $request->validate([
             'student_number' => 'nullable|string|max:50',
@@ -201,7 +218,7 @@ class CourseController extends Controller
         $surname = ! empty($validated['surname']) ? trim($validated['surname']) : null;
 
         if ($firstName || $surname) {
-            $fullName = trim(($firstName ?? '') . ($middleName ? ' ' . $middleName : '') . ($surname ? ' ' . $surname : ''));
+            $fullName = trim(($firstName ?? '').($middleName ? ' '.$middleName : '').($surname ? ' '.$surname : ''));
         } else {
             $fullName = ! empty($validated['name']) ? trim($validated['name']) : explode('@', $email)[0];
             $nameParts = explode(' ', $fullName, 3);
@@ -227,13 +244,27 @@ class CourseController extends Controller
             ]);
         } else {
             $upData = [];
-            if (! empty($validated['student_number'])) $upData['student_number'] = trim($validated['student_number']);
-            if ($firstName) $upData['first_name'] = $firstName;
-            if ($middleName) $upData['middle_name'] = $middleName;
-            if ($surname) $upData['surname'] = $surname;
-            if (! empty($validated['gender'])) $upData['gender'] = $validated['gender'];
-            if (! empty($validated['date_of_birth'])) $upData['date_of_birth'] = $validated['date_of_birth'];
-            if (! empty($validated['password'])) $upData['password'] = bcrypt($validated['password']);
+            if (! empty($validated['student_number'])) {
+                $upData['student_number'] = trim($validated['student_number']);
+            }
+            if ($firstName) {
+                $upData['first_name'] = $firstName;
+            }
+            if ($middleName) {
+                $upData['middle_name'] = $middleName;
+            }
+            if ($surname) {
+                $upData['surname'] = $surname;
+            }
+            if (! empty($validated['gender'])) {
+                $upData['gender'] = $validated['gender'];
+            }
+            if (! empty($validated['date_of_birth'])) {
+                $upData['date_of_birth'] = $validated['date_of_birth'];
+            }
+            if (! empty($validated['password'])) {
+                $upData['password'] = bcrypt($validated['password']);
+            }
             if (! empty($upData)) {
                 $student->update($upData);
             }
@@ -246,9 +277,7 @@ class CourseController extends Controller
 
     public function importStudentsCsv(Request $request, Course $course): RedirectResponse
     {
-        if ($course->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->authorizeCourseManagement($course, $request->user());
 
         $request->validate([
             'csv_file' => 'required|file|mimes:csv,txt|max:2048',
@@ -348,7 +377,7 @@ class CourseController extends Controller
                     continue;
                 }
 
-                $fullName = trim(($firstName ?? '') . ($middleName ? ' ' . $middleName : '') . ($surname ? ' ' . $surname : ''));
+                $fullName = trim(($firstName ?? '').($middleName ? ' '.$middleName : '').($surname ? ' '.$surname : ''));
                 if (empty($fullName)) {
                     $fullName = explode('@', $email)[0];
                 }
@@ -371,13 +400,27 @@ class CourseController extends Controller
                     ]);
                 } else {
                     $upData = [];
-                    if ($studentNumber) $upData['student_number'] = $studentNumber;
-                    if ($firstName) $upData['first_name'] = $firstName;
-                    if ($middleName) $upData['middle_name'] = $middleName;
-                    if ($surname) $upData['surname'] = $surname;
-                    if ($gender) $upData['gender'] = $gender;
-                    if ($dob) $upData['date_of_birth'] = $dob;
-                    if (! empty($upData)) $student->update($upData);
+                    if ($studentNumber) {
+                        $upData['student_number'] = $studentNumber;
+                    }
+                    if ($firstName) {
+                        $upData['first_name'] = $firstName;
+                    }
+                    if ($middleName) {
+                        $upData['middle_name'] = $middleName;
+                    }
+                    if ($surname) {
+                        $upData['surname'] = $surname;
+                    }
+                    if ($gender) {
+                        $upData['gender'] = $gender;
+                    }
+                    if ($dob) {
+                        $upData['date_of_birth'] = $dob;
+                    }
+                    if (! empty($upData)) {
+                        $student->update($upData);
+                    }
                 }
 
                 $course->students()->syncWithoutDetaching([$student->id]);

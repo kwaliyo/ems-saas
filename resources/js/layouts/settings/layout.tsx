@@ -6,8 +6,8 @@ import { edit as editAppearance } from '@/routes/appearance';
 import { edit } from '@/routes/profile';
 import { show } from '@/routes/two-factor';
 import { edit as editPassword } from '@/routes/user-password';
-import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/react';
+import { type NavItem, type SharedData } from '@/types';
+import { Link, usePage } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';
 
 const sidebarNavItems: NavItem[] = [
@@ -27,6 +27,11 @@ const sidebarNavItems: NavItem[] = [
         icon: null,
     },
     {
+        title: 'Subscription & Billing',
+        href: '/settings/billing',
+        icon: null,
+    },
+    {
         title: 'Appearance',
         href: editAppearance(),
         icon: null,
@@ -34,7 +39,16 @@ const sidebarNavItems: NavItem[] = [
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
-    // When server-side rendering, we only render the layout on the client...
+    const { auth } = usePage<SharedData>().props;
+    const isSuperAdmin = auth?.user?.role === 'super_admin' || auth?.user?.email === 'instructor@example.com';
+
+    const navItems = [
+        ...sidebarNavItems,
+        ...(isSuperAdmin
+            ? [{ title: 'System Announcement', href: '/settings/announcement', icon: null }]
+            : []),
+    ];
+
     if (typeof window === 'undefined') {
         return null;
     }
@@ -51,7 +65,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
             <div className="flex flex-col lg:flex-row lg:space-x-12">
                 <aside className="w-full max-w-xl lg:w-48">
                     <nav className="flex flex-col space-y-1 space-x-0">
-                        {sidebarNavItems.map((item, index) => (
+                        {navItems.map((item, index) => (
                             <Button
                                 key={`${resolveUrl(item.href)}-${index}`}
                                 size="sm"
@@ -77,8 +91,8 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
 
                 <Separator className="my-6 lg:hidden" />
 
-                <div className="flex-1 md:max-w-2xl">
-                    <section className="max-w-xl space-y-12">
+                <div className="flex-1 min-w-0 max-w-full">
+                    <section className="w-full space-y-8">
                         {children}
                     </section>
                 </div>

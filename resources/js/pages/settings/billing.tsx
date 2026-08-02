@@ -1,0 +1,232 @@
+import AppLayout from '@/layouts/app-layout';
+import SettingsLayout from '@/layouts/settings/layout';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Head, router, usePage } from '@inertiajs/react';
+import {
+    CheckCircle2,
+    Crown,
+    GraduationCap,
+    Radio,
+    Sparkles,
+    Zap,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+declare global {
+    interface Window {
+        PaystackPop?: any;
+    }
+}
+
+interface Plan {
+    id: string;
+    name: string;
+    price: string;
+    period: string;
+    max_candidates: number;
+    features: string[];
+}
+
+interface Subscription {
+    plan: string;
+    max_candidates: number;
+    expires_at?: string | null;
+}
+
+interface Props {
+    subscription: Subscription;
+    plans: Plan[];
+    paystack_public_key?: string;
+    has_paystack_keys?: boolean;
+}
+
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Settings', href: '/settings/profile' },
+    { title: 'Subscription & Billing', href: '/settings/billing' },
+];
+
+export default function SettingsBilling({ subscription, plans, paystack_public_key, has_paystack_keys }: Props) {
+    const { auth } = usePage<SharedData>().props;
+    const [paystackLoaded, setPaystackLoaded] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && !window.PaystackPop) {
+            const script = document.createElement('script');
+            script.src = 'https://js.paystack.co/v1/inline.js';
+            script.async = true;
+            script.onload = () => setPaystackLoaded(true);
+            document.body.appendChild(script);
+        } else if (typeof window !== 'undefined' && window.PaystackPop) {
+            setPaystackLoaded(true);
+        }
+    }, []);
+
+    const handleUpgrade = (planId: string, planName: string) => {
+        if (planId === 'free') {
+            if (confirm(`Switch your subscription plan to Free Starter?`)) {
+                router.post('/settings/billing/upgrade', { plan: planId });
+            }
+            return;
+        }
+
+        const amountKobo = planId === 'pro' ? 1500000 : 9500000; // ₦15,000 or ₦95,000 in Kobo
+
+        // 1. Attempt Paystack Pop-up Checkout if public key is available
+        if (paystack_public_key && typeof window !== 'undefined' && window.PaystackPop) {
+            try {
+                if (typeof window.PaystackPop === 'function') {
+                    const paystack = new window.PaystackPop();
+                    paystack.newTransaction({
+                        key: paystack_public_key,
+                        email: auth.user.email,
+                        amount: amountKobo,
+                        currency: 'NGN',
+                        ref: 'KEMS-' + Math.floor(Math.random() * 1000000000 + 1),
+                        onSuccess: (transaction: any) => {
+                            router.post('/settings/billing/verify-paystack', {
+                                reference: transaction.reference || transaction.trxref,
+                                plan: planId,
+                            });
+                        },
+                        onCancel: () => {
+                            // Popup closed
+                        },
+                    });
+                    return;
+                }
+
+                if (window.PaystackPop.setup) {
+                    const handler = window.PaystackPop.setup({
+                        key: paystack_public_key,
+                        email: auth.user.email,
+                        amount: amountKobo,
+                        currency: 'NGN',
+                        ref: 'KEMS-' + Math.floor(Math.random() * 1000000000 + 1),
+                        callback: function (response: { reference: string }) {
+                            router.post('/settings/billing/verify-paystack', {
+                                reference: response.reference,
+                                plan: planId,
+                            });
+                        },
+                        onClose: function () {
+                            // Popup closed
+                        },
+                    });
+                    handler.openIframe();
+                    return;
+                }
+            } catch (err) {
+                console.error('Paystack popup error:', err);
+            }
+        }
+
+        // 2. Fallback to Backend Paystack Checkout initialization
+        router.post('/settings/billing/paystack-init', { plan: planId });
+    };
+
+    return (
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="Subscription & Billing - K-EMS Settings" />
+
+            <SettingsLayout>
+                <div className="space-y-6">
+                    {/* Header Banner */}
+                    <div className="p-6 rounded-2xl bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 border border-emerald-500/30 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="space-y-2">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black uppercase tracking-wider border border-emerald-500/30">
+                                <Zap className="w-3.5 h-3.5" /> Plan & Candidate Capacity
+                            </div>
+                            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                                Subscription & Billing Settings
+                            </h1>
+                            <p className="text-xs text-emerald-200/80 font-medium">
+                                Manage your instructor plan, candidate live room seat capacity, and features.
+                            </p>
+                        </div>
+
+                        <div className="p-4 rounded-xl bg-white/10 border border-white/20 text-right shrink-0">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 block">
+                                Current Active Plan
+                            </span>
+                            <div className="text-xl font-black text-white flex items-center justify-end gap-1.5 mt-0.5">
+                                {subscription.plan === 'institution' && <Crown className="w-5 h-5 text-amber-400" />}
+                                {subscription.plan === 'pro' && <Sparkles className="w-5 h-5 text-emerald-400" />}
+                                {subscription.plan === 'free' && <GraduationCap className="w-5 h-5 text-slate-300" />}
+                                {subscription.plan.toUpperCase()}
+                            </div>
+                            <p className="text-xs font-bold text-emerald-200 mt-1">
+                                Seat Limit: {subscription.max_candidates === 999999 ? 'Unlimited Seats' : `${subscription.max_candidates} candidates / room`}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Plan Cards Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {plans.map((plan) => {
+                            const isCurrent = subscription.plan === plan.id;
+                            return (
+                                <div
+                                    key={plan.id}
+                                    className={`rounded-2xl p-6 border flex flex-col justify-between transition-all space-y-6 ${
+                                        isCurrent
+                                            ? 'bg-gradient-to-b from-emerald-500/10 via-card to-card border-emerald-500 shadow-xl ring-1 ring-emerald-500/30'
+                                            : 'bg-card border-border/80 shadow-xs hover:border-emerald-500/40'
+                                    }`}
+                                >
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <h2 className="text-lg font-black text-foreground">
+                                                {plan.name}
+                                            </h2>
+                                            {isCurrent && (
+                                                <span className="px-2.5 py-1 rounded-full bg-emerald-500 text-slate-950 font-black text-[10px] uppercase tracking-wider shadow-xs">
+                                                    Active Plan
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-4xl font-black text-foreground">{plan.price}</span>
+                                            <span className="text-xs font-bold text-muted-foreground">{plan.period}</span>
+                                        </div>
+
+                                        <div className="p-3 rounded-xl bg-muted/50 border border-border/60 text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                                            <Radio className="w-4 h-4 text-emerald-500" />
+                                            {plan.max_candidates === 999999 ? 'Unlimited candidate seats' : `Up to ${plan.max_candidates} seats per room`}
+                                        </div>
+
+                                        <hr className="border-border/60" />
+
+                                        <ul className="space-y-2.5 text-xs text-muted-foreground font-medium">
+                                            {plan.features.map((feat, idx) => (
+                                                <li key={idx} className="flex items-center gap-2">
+                                                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                                    <span>{feat}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        disabled={isCurrent}
+                                        onClick={() => handleUpgrade(plan.id, plan.name)}
+                                        className={`w-full py-3 rounded-xl font-black text-xs transition-all cursor-pointer shadow-xs ${
+                                            isCurrent
+                                                ? 'bg-muted text-muted-foreground cursor-not-allowed border border-border'
+                                                : plan.id === 'pro'
+                                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/20'
+                                                : 'bg-primary text-primary-foreground hover:opacity-90'
+                                        }`}
+                                    >
+                                        {isCurrent ? 'Current Plan' : `Switch to ${plan.name}`}
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </SettingsLayout>
+        </AppLayout>
+    );
+}

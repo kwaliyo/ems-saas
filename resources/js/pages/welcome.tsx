@@ -29,6 +29,7 @@ import { useState } from 'react';
 import AppearanceToggleDropdown from '@/components/appearance-dropdown';
 import { AppFooter } from '@/components/app-footer';
 import AppLogo from '@/components/app-logo';
+import { SystemAnnouncement } from '@/components/system-announcement';
 
 export default function Welcome({
     canRegister = true,
@@ -59,6 +60,7 @@ export default function Welcome({
             </Head>
 
             <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary selection:text-primary-foreground">
+                <SystemAnnouncement />
                 {/* Navbar */}
                 <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-background/95 backdrop-blur-md">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
@@ -74,6 +76,9 @@ export default function Welcome({
                             </a>
                             <a href="#how-it-works" className="hover:text-foreground transition-colors">
                                 How It Works
+                            </a>
+                            <a href="#pricing" className="hover:text-foreground transition-colors text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center gap-1">
+                                Pricing
                             </a>
                             <a href="#student-access" className="hover:text-foreground transition-colors">
                                 Student Join
@@ -157,6 +162,13 @@ export default function Welcome({
                                     className="flex items-center gap-2 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
                                 >
                                     <Clock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> How It Works
+                                </a>
+                                <a
+                                    href="#pricing"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className="flex items-center gap-2 p-2 rounded-lg font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 transition-colors"
+                                >
+                                    <Zap className="w-4 h-4 text-emerald-500" /> Pricing & Plans
                                 </a>
                                 <a
                                     href="#student-access"
@@ -471,6 +483,170 @@ export default function Welcome({
                                         Monitor live responses on screen and download comprehensive scorecards and CSV reports.
                                     </p>
                                 </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Pricing Section */}
+                    <section id="pricing" className="py-16 md:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+                        <div className="text-center space-y-3 max-w-3xl mx-auto">
+                            <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-black text-xs uppercase tracking-widest">
+                                Simple, Transparent Pricing
+                            </span>
+                            <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-foreground">
+                                Plans Scaled for Every Educator & Institution
+                            </h2>
+                            <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+                                Choose the plan that fits your classroom size. Upgrade or downgrade anytime in Nigerian Naira (₦).
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            {/* Free Starter */}
+                            <div className="rounded-3xl p-6 sm:p-8 bg-card border border-border shadow-xs hover:border-emerald-500/40 transition-all flex flex-col justify-between space-y-6">
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-xl font-black text-foreground">Free Starter</h3>
+                                        <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground font-bold text-[10px] uppercase">
+                                            Forever Free
+                                        </span>
+                                    </div>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-4xl font-black text-foreground">₦0</span>
+                                        <span className="text-xs font-bold text-muted-foreground">/ month</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground font-medium">
+                                        Ideal for individual tutors and small classroom quizzes.
+                                    </p>
+                                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-extrabold text-emerald-600 dark:text-emerald-400">
+                                        Up to 25 Candidate Seats / Room
+                                    </div>
+                                    <hr className="border-border/60" />
+                                    <ul className="space-y-3 text-xs text-muted-foreground font-medium">
+                                        <li className="flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <span>25 candidate seats per live room</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <span>Unlimited Courses & Modules</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <span>Instant auto-graded exams</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <span>Basic report downloads</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <Link href={canRegister ? register() : '/login'}>
+                                    <button className="w-full py-3 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-extrabold text-xs transition-colors cursor-pointer">
+                                        Get Started Free
+                                    </button>
+                                </Link>
+                            </div>
+
+                            {/* Pro Educator */}
+                            <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-b from-emerald-500/10 via-card to-card border-2 border-emerald-500 shadow-xl flex flex-col justify-between space-y-6 relative">
+                                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-emerald-600 text-white font-black text-[10px] uppercase tracking-wider shadow-md">
+                                    Most Popular Choice
+                                </div>
+                                <div className="space-y-4 pt-2">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-xl font-black text-foreground">Pro Educator</h3>
+                                        <Sparkles className="w-5 h-5 text-emerald-500" />
+                                    </div>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-4xl font-black text-emerald-600 dark:text-emerald-400">₦15,000</span>
+                                        <span className="text-xs font-bold text-muted-foreground">/ month</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground font-medium">
+                                        Built for university lecturers, departments, and large classes.
+                                    </p>
+                                    <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-xs font-extrabold text-emerald-600 dark:text-emerald-400">
+                                        Up to 250 Candidate Seats / Room
+                                    </div>
+                                    <hr className="border-border/60" />
+                                    <ul className="space-y-3 text-xs text-muted-foreground font-medium">
+                                        <li className="flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <span><strong>250 candidate seats</strong> per live room</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <span>Bulk CSV student & question imports</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <span>External Guest ID Generator</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <span>CSV scorecard report export</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <span>Custom exam retake policies</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <Link href={canRegister ? register() : '/login'}>
+                                    <button className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition-colors shadow-emerald-500/20 shadow-lg cursor-pointer">
+                                        Upgrade to Pro Educator
+                                    </button>
+                                </Link>
+                            </div>
+
+                            {/* Institution */}
+                            <div className="rounded-3xl p-6 sm:p-8 bg-card border border-border shadow-xs hover:border-emerald-500/40 transition-all flex flex-col justify-between space-y-6">
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-xl font-black text-foreground">Institution</h3>
+                                        <span className="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold text-[10px] uppercase">
+                                            University Tier
+                                        </span>
+                                    </div>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-4xl font-black text-foreground">₦95,000</span>
+                                        <span className="text-xs font-bold text-muted-foreground">/ month</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground font-medium">
+                                        Designed for faculties, polytechnics, and full institutions.
+                                    </p>
+                                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs font-extrabold text-amber-600 dark:text-amber-400">
+                                        Unlimited Candidate Seats / Room
+                                    </div>
+                                    <hr className="border-border/60" />
+                                    <ul className="space-y-3 text-xs text-muted-foreground font-medium">
+                                        <li className="flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <span><strong>Unlimited candidate seats</strong> per live room</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <span>Multi-instructor administration</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <span>Dedicated priority server capacity</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <span>Custom university branding</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <span>Full invigilation audit logs & 24/7 support</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <Link href={canRegister ? register() : '/login'}>
+                                    <button className="w-full py-3 rounded-xl bg-primary text-primary-foreground hover:opacity-90 font-extrabold text-xs transition-opacity cursor-pointer">
+                                        Contact Sales / Enroll
+                                    </button>
+                                </Link>
                             </div>
                         </div>
                     </section>

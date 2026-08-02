@@ -147,6 +147,9 @@ export default function AdminUsers({ users, filters }: Props) {
                                             }`}>
                                                 {u.role === 'super_admin' ? '🛡️ Super Admin' : '🎓 Instructor'}
                                             </span>
+                                            <span className="block mt-1 text-[10px] font-bold text-muted-foreground">
+                                                Plan: <strong className="text-emerald-600 dark:text-emerald-400 uppercase">{u.subscription_plan || 'free'}</strong>
+                                            </span>
                                         </td>
                                         <td className="p-3 text-muted-foreground">
                                             {new Date(u.created_at).toLocaleDateString()}

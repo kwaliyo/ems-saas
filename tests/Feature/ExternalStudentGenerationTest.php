@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
+use App\Models\Module;
+use App\Models\Room;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -58,7 +60,7 @@ class ExternalStudentGenerationTest extends TestCase
             'code' => 'CS202',
             'title' => 'System Admin',
         ]);
-        $module = \App\Models\Module::create([
+        $module = Module::create([
             'course_id' => $course->id,
             'title' => 'Final Exam',
             'allow_retake' => false,
@@ -70,7 +72,7 @@ class ExternalStudentGenerationTest extends TestCase
             'title' => 'Final Exam',
             'subject' => 'CS202',
         ]);
-        $room = \App\Models\Room::create([
+        $room = Room::create([
             'user_id' => $instructor->id,
             'assessment_id' => $assessment->id,
             'code' => 'RETAKE1',
@@ -92,5 +94,39 @@ class ExternalStudentGenerationTest extends TestCase
         ]);
 
         $response->assertSessionHasErrors(['code', 'student_id_code']);
+    }
+
+    public function test_guest_candidate_blocked_when_allow_guests_is_false(): void
+    {
+        $instructor = User::factory()->create();
+        $course = Course::create([
+            'user_id' => $instructor->id,
+            'code' => 'CS301',
+            'title' => 'Official Exam Course',
+        ]);
+        $module = Module::create([
+            'course_id' => $course->id,
+            'title' => 'Official Final',
+        ]);
+        $assessment = $instructor->assessments()->create([
+            'module_id' => $module->id,
+            'title' => 'Official Final Exam',
+            'subject' => 'CS301',
+        ]);
+        $room = Room::create([
+            'user_id' => $instructor->id,
+            'assessment_id' => $assessment->id,
+            'code' => 'OFFICIAL1',
+            'mode' => 'time_based',
+            'status' => 'active',
+            'settings' => ['allow_guests' => false],
+        ]);
+
+        $response = $this->post('/join', [
+            'code' => 'OFFICIAL1',
+            'student_id_code' => 'EXT-2026-9999',
+        ]);
+
+        $response->assertSessionHasErrors(['student_id_code']);
     }
 }

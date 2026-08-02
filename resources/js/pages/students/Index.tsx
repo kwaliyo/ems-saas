@@ -67,10 +67,12 @@ export default function StudentIndex({ students, availableCourses }: Props) {
 
     const filteredStudents = students.filter((s) => {
         if (selectedCourseTab === 'unassigned') {
+            if (isGuestStudent(s)) return false;
             if (s.enrolled_courses && s.enrolled_courses.length > 0) return false;
         } else if (selectedCourseTab === 'external') {
             if (!isGuestStudent(s)) return false;
         } else if (typeof selectedCourseTab === 'number') {
+            if (isGuestStudent(s)) return false;
             const isEnrolledInCourse = (s.enrolled_courses || []).some((c) => c.id === selectedCourseTab);
             if (!isEnrolledInCourse) return false;
         }
@@ -463,7 +465,7 @@ export default function StudentIndex({ students, availableCourses }: Props) {
 
                             {availableCourses.map((course) => {
                                 const count = students.filter((s) =>
-                                    (s.enrolled_courses || []).some((c) => c.id === course.id)
+                                    !isGuestStudent(s) && (s.enrolled_courses || []).some((c) => c.id === course.id)
                                 ).length;
                                 const isSelected = selectedCourseTab === course.id;
 

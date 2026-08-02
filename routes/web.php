@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminRoomController;
+use App\Http\Controllers\Admin\AdminSubscriptionController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AssessmentController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentJoinController;
+use App\Http\Controllers\SubscriptionController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -98,6 +100,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/reports/{room}/participant/{participant}', [ReportController::class, 'showScript'])->name('reports.participant-script');
     Route::get('/reports/{room}/export-csv', [ReportController::class, 'exportCsv'])->name('reports.export-csv');
 
+    // Instructor Subscription & Billing Settings
+    Route::get('/settings/billing', [SubscriptionController::class, 'show'])->name('subscription.billing');
+    Route::post('/settings/billing/upgrade', [SubscriptionController::class, 'upgrade'])->name('subscription.upgrade');
+    Route::post('/settings/billing/paystack-init', [SubscriptionController::class, 'initPaystack'])->name('subscription.paystack.init');
+    Route::get('/settings/billing/paystack-callback', [SubscriptionController::class, 'paystackCallback'])->name('subscription.paystack.callback');
+    Route::post('/settings/billing/verify-paystack', [SubscriptionController::class, 'verifyPaystack'])->name('subscription.verify-paystack');
+
     // Super Admin System Monitoring & Management
     Route::post('/admin/stop-impersonating', [AdminUserController::class, 'stopImpersonating'])->name('admin.stop-impersonating');
 
@@ -109,6 +118,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
         Route::get('/rooms', [AdminRoomController::class, 'index'])->name('rooms.index');
         Route::post('/rooms/{room}/end', [AdminRoomController::class, 'endRoom'])->name('rooms.end');
+        Route::get('/subscriptions', [AdminSubscriptionController::class, 'index'])->name('subscriptions.index');
+        Route::post('/users/{user}/plan', [AdminSubscriptionController::class, 'updatePlan'])->name('users.update-plan');
     });
 });
 

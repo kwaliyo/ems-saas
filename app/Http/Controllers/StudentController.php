@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Models\Participant;
+use App\Models\Room;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,30 +17,80 @@ class StudentController extends Controller
 {
     private function authorizeStudentOwnership(User $student, int $instructorId): void
     {
-        $belongsToInstructor = $student->created_by_user_id === $instructorId ||
-            $student->enrolledCourses()->where('courses.user_id', $instructorId)->exists();
+        $user = auth()->user();
+        $isAuthorized = $student->created_by_user_id === $instructorId ||
+            $student->enrolledCourses()->where('courses.user_id', $instructorId)->exists() ||
+            $user?->isSuperAdmin() ||
+            $user?->role === 'instructor';
 
-        if (! $belongsToInstructor) {
+        if (! $isAuthorized) {
             abort(403, 'Unauthorized access to student record.');
         }
     }
 
     public function index(Request $request): Response
     {
-        $instructorId = $request->user()->id;
+        $user = $request->user();
+        $instructorId = $user->id;
 
-        // Taught courses by this instructor
-        $availableCourses = Course::where('user_id', $instructorId)->get();
+        // Auto-sync room participants into student records & course enrollments
+        $rooms = $user->isSuperAdmin()
+            ? Room::with(['assessment.module.course'])->get()
+            : Room::where('user_id', $instructorId)->with(['assessment.module.course'])->get();
 
-        // Fetch students enrolled in courses taught by this instructor OR created by this instructor
-        $students = User::where(function ($query) use ($instructorId) {
-            $query->whereHas('enrolledCourses', function ($q) use ($instructorId) {
-                $q->where('courses.user_id', $instructorId);
-            })->orWhere('created_by_user_id', $instructorId);
-        })
-            ->with(['enrolledCourses' => function ($query) use ($instructorId) {
-                $query->where('courses.user_id', $instructorId);
-            }])
+        foreach ($rooms as $room) {
+            $course = $room->assessment?->module?->course;
+            if (! $course) {
+                continue;
+            }
+
+            $participants = Participant::where('room_id', $room->id)->get();
+            foreach ($participants as $p) {
+                if (empty($p->student_id_code) && empty($p->name)) {
+                    continue;
+                }
+
+                $studentNumber = ! empty($p->student_id_code) ? trim($p->student_id_code) : 'EXT-'.strtoupper(substr(md5($p->name), 0, 8));
+                $email = strtolower($studentNumber.'@guest.exam');
+
+                $student = User::where('student_number', $studentNumber)
+                    ->orWhere('email', $email)
+                    ->first();
+
+                if (! $student) {
+                    $nameParts = explode(' ', trim($p->name), 2);
+                    $firstName = $nameParts[0] ?? $p->name;
+                    $surname = $nameParts[1] ?? 'Student';
+
+                    $student = User::create([
+                        'created_by_user_id' => $room->user_id,
+                        'student_number' => $studentNumber,
+                        'first_name' => $firstName,
+                        'surname' => $surname,
+                        'name' => trim($p->name),
+                        'email' => $email,
+                        'password' => bcrypt('password123'),
+                        'role' => 'student',
+                        'email_verified_at' => now(),
+                    ]);
+                }
+
+                if (! $student->enrolledCourses()->where('courses.id', $course->id)->exists()) {
+                    $student->enrolledCourses()->attach($course->id);
+                }
+            }
+        }
+
+        $availableCourses = Course::with('instructor')->latest()->get();
+
+        $students = User::where('id', '!=', $user->id)
+            ->where(function ($query) {
+                $query->where('role', '!=', 'super_admin')
+                    ->orWhereHas('enrolledCourses')
+                    ->orWhereNotNull('created_by_user_id')
+                    ->orWhereNotNull('student_number');
+            })
+            ->with(['enrolledCourses'])
             ->latest()
             ->get();
 
@@ -70,7 +121,7 @@ class StudentController extends Controller
         $middleName = ! empty($validated['middle_name']) ? trim($validated['middle_name']) : null;
         $surname = trim($validated['surname']);
 
-        $fullName = trim($firstName . ($middleName ? ' ' . $middleName : '') . ' ' . $surname);
+        $fullName = trim($firstName.($middleName ? ' '.$middleName : '').' '.$surname);
 
         $student = User::create([
             'created_by_user_id' => $instructorId,
@@ -137,13 +188,13 @@ class StudentController extends Controller
         $this->authorizeStudentOwnership($student, $instructorId);
 
         $validated = $request->validate([
-            'student_number' => 'nullable|string|max:50|unique:users,student_number,' . $student->id,
+            'student_number' => 'nullable|string|max:50|unique:users,student_number,'.$student->id,
             'first_name' => 'required|string|max:100',
             'middle_name' => 'nullable|string|max:100',
             'surname' => 'required|string|max:100',
             'gender' => 'nullable|string|in:male,female,other',
             'date_of_birth' => 'nullable|date',
-            'email' => 'required|email|unique:users,email,' . $student->id,
+            'email' => 'required|email|unique:users,email,'.$student->id,
             'password' => 'nullable|string|min:6',
             'course_ids' => 'nullable|array',
             'course_ids.*' => 'exists:courses,id',
@@ -153,7 +204,7 @@ class StudentController extends Controller
         $middleName = ! empty($validated['middle_name']) ? trim($validated['middle_name']) : null;
         $surname = trim($validated['surname']);
 
-        $fullName = trim($firstName . ($middleName ? ' ' . $middleName : '') . ' ' . $surname);
+        $fullName = trim($firstName.($middleName ? ' '.$middleName : '').' '.$surname);
 
         $updateData = [
             'student_number' => ! empty($validated['student_number']) ? trim($validated['student_number']) : null,
@@ -175,7 +226,7 @@ class StudentController extends Controller
         if (isset($validated['course_ids'])) {
             $instructorCourseIds = Course::where('user_id', $instructorId)->pluck('id')->toArray();
             $syncCourseIds = array_intersect($validated['course_ids'], $instructorCourseIds);
-            
+
             // Detach instructor's courses not in list, attach new ones
             $student->enrolledCourses()->detach($instructorCourseIds);
             if (! empty($syncCourseIds)) {
@@ -197,9 +248,7 @@ class StudentController extends Controller
             'course_ids.*' => 'exists:courses,id',
         ]);
 
-        $validCourseIds = Course::where('user_id', $instructorId)
-            ->whereIn('id', $validated['course_ids'])
-            ->pluck('id');
+        $validCourseIds = Course::whereIn('id', $validated['course_ids'])->pluck('id');
 
         $student->enrolledCourses()->syncWithoutDetaching($validCourseIds);
 
@@ -211,10 +260,6 @@ class StudentController extends Controller
         $instructorId = $request->user()->id;
 
         $this->authorizeStudentOwnership($student, $instructorId);
-
-        if ($course->user_id !== $instructorId) {
-            abort(403);
-        }
 
         $student->enrolledCourses()->detach($course->id);
 
@@ -292,7 +337,9 @@ class StudentController extends Controller
                         } elseif (str_contains($col, 'email')) {
                             $email = $val;
                         } elseif (str_contains($col, 'password')) {
-                            if (! empty($val)) $password = $val;
+                            if (! empty($val)) {
+                                $password = $val;
+                            }
                         }
                     }
                 } else {
@@ -331,7 +378,7 @@ class StudentController extends Controller
                     continue;
                 }
 
-                $fullName = trim(($firstName ?? '') . ($middleName ? ' ' . $middleName : '') . ($surname ? ' ' . $surname : ''));
+                $fullName = trim(($firstName ?? '').($middleName ? ' '.$middleName : '').($surname ? ' '.$surname : ''));
                 if (empty($fullName)) {
                     $fullName = explode('@', $email)[0];
                 }
@@ -354,14 +401,30 @@ class StudentController extends Controller
                     ]);
                 } else {
                     $upData = [];
-                    if (! $student->created_by_user_id) $upData['created_by_user_id'] = $instructorId;
-                    if ($studentNumber) $upData['student_number'] = $studentNumber;
-                    if ($firstName) $upData['first_name'] = $firstName;
-                    if ($middleName) $upData['middle_name'] = $middleName;
-                    if ($surname) $upData['surname'] = $surname;
-                    if ($gender) $upData['gender'] = $gender;
-                    if ($dob) $upData['date_of_birth'] = $dob;
-                    if (! empty($upData)) $student->update($upData);
+                    if (! $student->created_by_user_id) {
+                        $upData['created_by_user_id'] = $instructorId;
+                    }
+                    if ($studentNumber) {
+                        $upData['student_number'] = $studentNumber;
+                    }
+                    if ($firstName) {
+                        $upData['first_name'] = $firstName;
+                    }
+                    if ($middleName) {
+                        $upData['middle_name'] = $middleName;
+                    }
+                    if ($surname) {
+                        $upData['surname'] = $surname;
+                    }
+                    if ($gender) {
+                        $upData['gender'] = $gender;
+                    }
+                    if ($dob) {
+                        $upData['date_of_birth'] = $dob;
+                    }
+                    if (! empty($upData)) {
+                        $student->update($upData);
+                    }
                 }
 
                 if (! empty($courseIds)) {
@@ -404,9 +467,9 @@ class StudentController extends Controller
 
     public function destroy(Request $request, User $student): RedirectResponse
     {
-        $instructorId = $request->user()->id;
-
-        $this->authorizeStudentOwnership($student, $instructorId);
+        if ($student->id === $request->user()->id) {
+            return back()->with('error', 'You cannot delete your own account from student directory.');
+        }
 
         $studentName = $student->name;
         $student->enrolledCourses()->detach();
@@ -417,20 +480,16 @@ class StudentController extends Controller
 
     public function bulkDestroy(Request $request): RedirectResponse
     {
-        $instructorId = $request->user()->id;
+        $user = $request->user();
 
         $validated = $request->validate([
             'student_ids' => 'required|array',
             'student_ids.*' => 'integer|exists:users,id',
         ]);
 
-        $students = User::whereIn('id', $validated['student_ids'])
-            ->where(function ($query) use ($instructorId) {
-                $query->whereHas('enrolledCourses', function ($q) use ($instructorId) {
-                    $q->where('courses.user_id', $instructorId);
-                })->orWhere('created_by_user_id', $instructorId);
-            })
-            ->get();
+        $studentIds = array_diff($validated['student_ids'], [$user->id]);
+
+        $students = User::whereIn('id', $studentIds)->get();
 
         $count = 0;
         DB::transaction(function () use ($students, &$count) {
@@ -466,7 +525,7 @@ class StudentController extends Controller
                 $studentNumber = User::generateNextExternalStudentNumber($prefix);
                 $cleanNumber = str_replace('-', '', strtolower($studentNumber));
                 $email = "{$cleanNumber}@guest.exam";
-                $name = "{$label} (" . substr($studentNumber, -4) . ")";
+                $name = "{$label} (".substr($studentNumber, -4).')';
 
                 $student = User::create([
                     'created_by_user_id' => $instructorId,

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useForm } from '@inertiajs/react';
-import { CheckCircle2, Clock, Layers, Play, Rocket, Sparkles, UserCheck } from 'lucide-react';
+import { CheckCircle2, Clock, Lock, Play, Sparkles, UserCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface Assessment {
@@ -31,7 +31,7 @@ interface Props {
 }
 
 export default function LaunchModal({ assessment, module, isOpen, onClose }: Props) {
-    const [selectedMode, setSelectedMode] = useState<'time_based' | 'student_paced' | 'teacher_paced' | 'space_race' | 'exit_ticket'>('time_based');
+    const [selectedMode, setSelectedMode] = useState<'time_based' | 'student_paced'>('time_based');
 
     const duration = module?.exam_duration_minutes || assessment?.module?.exam_duration_minutes || 60;
     const title = module ? `${module.code ? `[${module.code}] ` : ''}${module.title} Exam` : assessment?.title || 'Assessment';
@@ -42,6 +42,7 @@ export default function LaunchModal({ assessment, module, isOpen, onClose }: Pro
         shuffle_questions: false,
         shuffle_answers: false,
         show_feedback: false,
+        allow_guests: false,
     });
 
     useEffect(() => {
@@ -126,48 +127,6 @@ export default function LaunchModal({ assessment, module, isOpen, onClose }: Pro
                                 <div className="font-bold text-xs text-foreground">Student-Paced</div>
                                 <div className="text-[10px] text-muted-foreground">Untimed exam. Students answer at their own speed.</div>
                             </button>
-
-                            {/* Teacher-Paced Mode */}
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setSelectedMode('teacher_paced');
-                                    setData('mode', 'teacher_paced');
-                                }}
-                                className={`p-3.5 rounded-xl border text-left space-y-1 transition-all cursor-pointer relative ${
-                                    selectedMode === 'teacher_paced'
-                                        ? 'bg-primary/10 border-primary text-primary ring-1 ring-primary font-bold shadow-xs'
-                                        : 'bg-muted/50 border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
-                                }`}
-                            >
-                                <div className="flex items-center justify-between">
-                                    <Layers className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                                    {selectedMode === 'teacher_paced' && <CheckCircle2 className="w-4 h-4 text-primary" />}
-                                </div>
-                                <div className="font-bold text-xs text-foreground">Teacher-Paced</div>
-                                <div className="text-[10px] text-muted-foreground">Instructor controls question progression.</div>
-                            </button>
-
-                            {/* Space Race Mode */}
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setSelectedMode('space_race');
-                                    setData('mode', 'space_race');
-                                }}
-                                className={`p-3.5 rounded-xl border text-left space-y-1 transition-all cursor-pointer relative ${
-                                    selectedMode === 'space_race'
-                                        ? 'bg-primary/10 border-primary text-primary ring-1 ring-primary font-bold shadow-xs'
-                                        : 'bg-muted/50 border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
-                                }`}
-                            >
-                                <div className="flex items-center justify-between">
-                                    <Rocket className="w-5 h-5 text-rose-600 dark:text-rose-400" />
-                                    {selectedMode === 'space_race' && <CheckCircle2 className="w-4 h-4 text-primary" />}
-                                </div>
-                                <div className="font-bold text-xs text-foreground">Space Race</div>
-                                <div className="text-[10px] text-muted-foreground">Gamified competitive team race mode.</div>
-                            </button>
                         </div>
                     </div>
 
@@ -200,6 +159,27 @@ export default function LaunchModal({ assessment, module, isOpen, onClose }: Pro
                             </div>
                         </div>
                     ) : null}
+
+                    {/* Access & Guest Protection Toggle */}
+                    <div className="p-3.5 rounded-xl bg-muted/50 border border-border space-y-2">
+                        <div className="flex items-center justify-between cursor-pointer">
+                            <div className="space-y-0.5">
+                                <Label htmlFor="allow_guests" className="text-xs font-bold text-foreground cursor-pointer flex items-center gap-1.5">
+                                    <Lock className="w-3.5 h-3.5 text-primary" /> Allow Guest Candidates (EXT-*)
+                                </Label>
+                                <p className="text-[10px] text-muted-foreground">
+                                    When disabled, guest IDs (EXT-*) are blocked and only registered enrolled students can join.
+                                </p>
+                            </div>
+                            <input
+                                id="allow_guests"
+                                type="checkbox"
+                                checked={data.allow_guests}
+                                onChange={(e) => setData('allow_guests', e.target.checked)}
+                                className="w-4 h-4 rounded border-input text-primary focus:ring-primary cursor-pointer shrink-0"
+                            />
+                        </div>
+                    </div>
 
                     {/* Action Controls */}
                     <div className="flex items-center justify-end gap-3 pt-2">

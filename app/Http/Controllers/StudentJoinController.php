@@ -63,6 +63,24 @@ class StudentJoinController extends Controller
             ? ($studentUser->name ?: trim("{$studentUser->first_name} {$studentUser->surname}"))
             : (! empty($validated['name']) ? trim($validated['name']) : $studentCode);
 
+        // Block Guest Candidates if allow_guests setting is explicitly set to false
+        $allowGuests = isset($room->settings['allow_guests']) ? (bool) $room->settings['allow_guests'] : true;
+        $isGuestCandidate = (
+            str_starts_with(strtoupper($studentCode), 'EXT-') ||
+            str_starts_with(strtoupper($studentCode), 'GST-') ||
+            str_ends_with(strtolower($studentCode), '@guest.exam') ||
+            ($studentUser && (
+                (isset($studentUser->student_number) && (str_starts_with(strtoupper($studentUser->student_number), 'EXT-') || str_starts_with(strtoupper($studentUser->student_number), 'GST-'))) ||
+                (isset($studentUser->email) && str_ends_with(strtolower($studentUser->email), '@guest.exam'))
+            ))
+        );
+
+        if (! $allowGuests && $isGuestCandidate) {
+            return back()->withErrors([
+                'student_id_code' => 'Access Denied: Guest candidate IDs (EXT-*) are not permitted for this official assessment. Enrolled students must use their registered Student Number.',
+            ]);
+        }
+
         // Strict Course Enrollment Check
         $course = $room->assessment?->module?->course;
 
@@ -158,6 +176,18 @@ class StudentJoinController extends Controller
             ]);
         }
 
+        // Enforce instructor subscription candidate seat limit
+        $instructor = $room->user;
+        if ($instructor) {
+            $maxLimit = $instructor->maxCandidateLimit();
+            $currentCandidates = $room->participants()->count();
+            if ($currentCandidates >= $maxLimit) {
+                return back()->withErrors([
+                    'code' => "Candidate Capacity Exceeded: This exam room has reached its limit of {$maxLimit} candidates under the instructor's subscription plan.",
+                ]);
+            }
+        }
+
         $sessionToken = Str::uuid()->toString();
 
         // Assign team colors for space race
@@ -194,17 +224,17 @@ class StudentJoinController extends Controller
             $assessment->load(['questions' => function ($q) {
                 $q->orderBy('order', 'asc')->with('options');
             }]);
-        } else if (! empty($room->questions_snapshot)) {
+        } elseif (! empty($room->questions_snapshot)) {
             $assessment = [
                 'id' => 0,
-                'title' => $room->assessment_title ?? ($room->code . ' Assessment'),
+                'title' => $room->assessment_title ?? ($room->code.' Assessment'),
                 'subject' => $room->assessment_subject ?? 'General',
                 'questions' => $room->questions_snapshot,
             ];
         } else {
             $assessment = [
                 'id' => 0,
-                'title' => $room->assessment_title ?? ($room->code . ' Assessment'),
+                'title' => $room->assessment_title ?? ($room->code.' Assessment'),
                 'subject' => $room->assessment_subject ?? 'General',
                 'questions' => [],
             ];
