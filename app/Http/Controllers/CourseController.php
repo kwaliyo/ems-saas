@@ -15,7 +15,7 @@ class CourseController extends Controller
 {
     private function authorizeCourseManagement(Course $course, User $user): void
     {
-        $canManage = $course->user_id === $user->id || $user->isSuperAdmin() || $user->role === 'instructor';
+        $canManage = $course->user_id === $user->id || $user->isSuperAdmin() || $user->role === 'super_admin';
         if (! $canManage) {
             abort(403, 'Unauthorized access to course management.');
         }
@@ -25,22 +25,19 @@ class CourseController extends Controller
     {
         $user = $request->user();
 
-        // Taught courses created by this instructor
-        $taughtCourses = $user->taughtCourses()
-            ->withCount(['modules', 'students'])
-            ->with(['modules.assessments.rooms'])
-            ->latest()
-            ->get();
-
-        // All courses in the institution directory
-        $allCourses = Course::with('instructor')
-            ->withCount(['modules', 'students'])
-            ->with(['modules.assessments.rooms'])
-            ->latest()
-            ->get();
-
-        if ($user->isSuperAdmin() || $taughtCourses->isEmpty() || $user->role === 'instructor') {
-            $taughtCourses = $allCourses;
+        // Taught courses created by this instructor (or all courses if super admin)
+        if ($user->isSuperAdmin() || $user->role === 'super_admin') {
+            $taughtCourses = Course::with('instructor')
+                ->withCount(['modules', 'students'])
+                ->with(['modules.assessments.rooms'])
+                ->latest()
+                ->get();
+        } else {
+            $taughtCourses = $user->taughtCourses()
+                ->withCount(['modules', 'students'])
+                ->with(['modules.assessments.rooms'])
+                ->latest()
+                ->get();
         }
 
         // Enrolled courses as a student
