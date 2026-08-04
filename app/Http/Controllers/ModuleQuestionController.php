@@ -6,7 +6,6 @@ use App\Models\Assessment;
 use App\Models\Course;
 use App\Models\Module;
 use App\Models\Question;
-use App\Models\QuestionOption;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +26,7 @@ class ModuleQuestionController extends Controller
             $assessment = [
                 'id' => 0,
                 'module_id' => $module->id,
-                'title' => ($module->code ? "[{$module->code}] " : '') . $module->title . ' Exam',
+                'title' => ($module->code ? "[{$module->code}] " : '').$module->title.' Exam',
                 'description' => $module->description,
                 'subject' => $course->title,
                 'settings' => [
@@ -98,6 +97,10 @@ class ModuleQuestionController extends Controller
     {
         $this->authorizeOwner($course, $module);
 
+        if ($question->module_id !== $module->id) {
+            abort(404);
+        }
+
         $validated = $request->validate([
             'type' => 'required|string|in:multiple_choice,true_false,short_answer,multi_select',
             'question_text' => 'required|string',
@@ -135,6 +138,10 @@ class ModuleQuestionController extends Controller
     public function deleteQuestion(Request $request, Course $course, Module $module, Question $question): RedirectResponse
     {
         $this->authorizeOwner($course, $module);
+
+        if ($question->module_id !== $module->id) {
+            abort(404);
+        }
 
         $question->delete();
 
@@ -225,7 +232,7 @@ class ModuleQuestionController extends Controller
         if (! $assessment) {
             $assessment = $request->user()->assessments()->create([
                 'module_id' => $module->id,
-                'title' => ($module->code ? "[{$module->code}] " : '') . $module->title . ' Exam',
+                'title' => ($module->code ? "[{$module->code}] " : '').$module->title.' Exam',
                 'description' => $module->description,
                 'subject' => $course->title,
                 'settings' => [

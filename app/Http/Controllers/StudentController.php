@@ -34,10 +34,18 @@ class StudentController extends Controller
         $instructorId = $user->id;
         $isSuperAdmin = $user->isSuperAdmin() || $user->role === 'super_admin';
 
-        // Auto-sync room participants into student records & course enrollments
+        // Auto-sync room participants into student records & course enrollments.
+        // Participants are eager-loaded with the rooms, and existing students are
+        // resolved via one batched lookup keyed by student_number/email instead of
+        // a query per participant (previously an N+1 with writes on every load).
         $rooms = $isSuperAdmin
-            ? Room::with(['assessment.module.course'])->get()
-            : Room::where('user_id', $instructorId)->with(['assessment.module.course'])->get();
+            ? Room::with(['assessment.module.course', 'participants'])->get()
+            : Room::where('user_id', $instructorId)->with(['assessment.module.course', 'participants'])->get();
+
+        // First pass: compute the canonical identifiers for every participant.
+        $syncItems = [];   // [roomUserId, courseId, studentNumber, email, name]
+        $studentNumbers = [];
+        $emails = [];
 
         foreach ($rooms as $room) {
             $course = $room->assessment?->module?->course;
@@ -45,8 +53,7 @@ class StudentController extends Controller
                 continue;
             }
 
-            $participants = Participant::where('room_id', $room->id)->get();
-            foreach ($participants as $p) {
+            foreach ($room->participants as $p) {
                 if (empty($p->student_id_code) && empty($p->name)) {
                     continue;
                 }
@@ -54,31 +61,77 @@ class StudentController extends Controller
                 $studentNumber = ! empty($p->student_id_code) ? trim($p->student_id_code) : 'EXT-'.strtoupper(substr(md5($p->name), 0, 8));
                 $email = strtolower($studentNumber.'@guest.exam');
 
-                $student = User::where('student_number', $studentNumber)
-                    ->orWhere('email', $email)
-                    ->first();
+                $syncItems[] = [
+                    'room_user_id' => $room->user_id,
+                    'course_id' => $course->id,
+                    'student_number' => $studentNumber,
+                    'email' => $email,
+                    'name' => trim($p->name),
+                ];
+                $studentNumbers[] = $studentNumber;
+                $emails[] = $email;
+            }
+        }
+
+        if (! empty($syncItems)) {
+            // Batched lookup of already-existing students with their enrolled course IDs.
+            $existing = User::whereIn('student_number', array_unique($studentNumbers))
+                ->orWhereIn('email', array_unique($emails))
+                ->with(['enrolledCourses:id'])
+                ->get();
+
+            $byStudentNumber = $existing->keyBy('student_number');
+            $byEmail = $existing->keyBy('email');
+
+            // Map existing user_id <-> course_id attachments to prevent per-iteration queries
+            $existingPivotPairs = [];
+            foreach ($existing as $exStudent) {
+                foreach ($exStudent->enrolledCourses as $enc) {
+                    $existingPivotPairs[$exStudent->id.'-'.$enc->id] = true;
+                }
+            }
+
+            $newPivotEntries = [];
+
+            foreach ($syncItems as $item) {
+                $student = $byStudentNumber->get($item['student_number'])
+                    ?? $byEmail->get($item['email']);
 
                 if (! $student) {
-                    $nameParts = explode(' ', trim($p->name), 2);
-                    $firstName = $nameParts[0] ?? $p->name;
+                    $nameParts = explode(' ', $item['name'], 2);
+                    $firstName = $nameParts[0] ?? $item['name'];
                     $surname = $nameParts[1] ?? 'Student';
 
                     $student = User::create([
-                        'created_by_user_id' => $room->user_id,
-                        'student_number' => $studentNumber,
+                        'created_by_user_id' => $item['room_user_id'],
+                        'student_number' => $item['student_number'],
                         'first_name' => $firstName,
                         'surname' => $surname,
-                        'name' => trim($p->name),
-                        'email' => $email,
+                        'name' => $item['name'],
+                        'email' => $item['email'],
                         'password' => bcrypt('password123'),
                         'role' => 'student',
                         'email_verified_at' => now(),
                     ]);
+
+                    $byStudentNumber->put($student->student_number, $student);
+                    $byEmail->put($student->email, $student);
                 }
 
-                if (! $student->enrolledCourses()->where('courses.id', $course->id)->exists()) {
-                    $student->enrolledCourses()->attach($course->id);
+                $pairKey = $student->id.'-'.$item['course_id'];
+                if (! isset($existingPivotPairs[$pairKey])) {
+                    $newPivotEntries[] = [
+                        'user_id' => $student->id,
+                        'course_id' => $item['course_id'],
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                    $existingPivotPairs[$pairKey] = true;
                 }
+            }
+
+            if (! empty($newPivotEntries)) {
+                DB::table('course_user')->insertOrIgnore($newPivotEntries);
             }
         }
 
@@ -266,7 +319,12 @@ class StudentController extends Controller
             'course_ids.*' => 'exists:courses,id',
         ]);
 
-        $validCourseIds = Course::whereIn('id', $validated['course_ids'])->pluck('id');
+        // Only attach courses this instructor owns (super admin may attach any).
+        $courseQuery = Course::whereIn('id', $validated['course_ids']);
+        if (! ($request->user()->isSuperAdmin())) {
+            $courseQuery->where('user_id', $instructorId);
+        }
+        $validCourseIds = $courseQuery->pluck('id');
 
         $student->enrolledCourses()->syncWithoutDetaching($validCourseIds);
 
@@ -278,6 +336,11 @@ class StudentController extends Controller
         $instructorId = $request->user()->id;
 
         $this->authorizeStudentOwnership($student, $instructorId);
+
+        // Only allow detaching from a course the instructor owns (super admin: any).
+        if (! $request->user()->isSuperAdmin() && $course->user_id !== $instructorId) {
+            abort(403, 'Unauthorized to modify enrollment for this course.');
+        }
 
         $student->enrolledCourses()->detach($course->id);
 
@@ -489,6 +552,8 @@ class StudentController extends Controller
             return back()->with('error', 'You cannot delete your own account from student directory.');
         }
 
+        $this->authorizeStudentOwnership($student, $request->user()->id);
+
         $studentName = $student->name;
         $student->enrolledCourses()->detach();
         $student->delete();
@@ -509,16 +574,35 @@ class StudentController extends Controller
 
         $students = User::whereIn('id', $studentIds)->get();
 
+        $isSuperAdmin = $user->isSuperAdmin();
+
         $count = 0;
-        DB::transaction(function () use ($students, &$count) {
+        $skipped = 0;
+        DB::transaction(function () use ($students, $user, $isSuperAdmin, &$count, &$skipped) {
             foreach ($students as $student) {
+                // Only delete students this instructor owns (super admin may delete any).
+                $owns = $isSuperAdmin
+                    || $student->created_by_user_id === $user->id
+                    || $student->enrolledCourses()->where('courses.user_id', $user->id)->exists();
+
+                if (! $owns) {
+                    $skipped++;
+
+                    continue;
+                }
+
                 $student->enrolledCourses()->detach();
                 $student->delete();
                 $count++;
             }
         });
 
-        return back()->with('success', "Deleted {$count} student record(s) successfully.");
+        $message = "Deleted {$count} student record(s) successfully.";
+        if ($skipped > 0) {
+            $message .= " {$skipped} record(s) were skipped because you do not have access to them.";
+        }
+
+        return back()->with('success', $message);
     }
 
     public function generateExternalStudentIds(Request $request): RedirectResponse
