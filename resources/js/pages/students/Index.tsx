@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { Calendar, Copy, Download, Globe, GraduationCap, Key, KeyRound, Mail, Pencil, Plus, Sparkles, Trash2, Upload, UserCheck, Users, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -98,6 +99,7 @@ export default function StudentIndex({ students, availableCourses }: Props) {
 
     const { data: externalData, setData: setExternalData, post: postExternal, processing: externalProcessing, reset: resetExternal, errors: externalErrors } = useForm({
         quantity: 10,
+        names_list: '',
         prefix: 'EXT',
         label: 'Guest Candidate',
         course_id: '' as string | number,
@@ -1211,7 +1213,29 @@ export default function StudentIndex({ students, availableCourses }: Props) {
                             </div>
 
                             <div className="space-y-1">
-                                <Label htmlFor="ext_label" className="text-xs font-bold">Candidate Label / Name Prefix</Label>
+                                <Label htmlFor="ext_names_list" className="text-xs font-bold flex items-center justify-between">
+                                    <span>Candidate Names List (Optional)</span>
+                                    <span className="text-[10px] text-muted-foreground font-normal">One name per line or comma-separated</span>
+                                </Label>
+                                <Textarea
+                                    id="ext_names_list"
+                                    rows={3}
+                                    placeholder={`e.g.\nJohn Doe\nJane Smith\nAmina Bello`}
+                                    value={externalData.names_list}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        const count = val.split(/[\r\n,]+/).map((s) => s.trim()).filter(Boolean).length;
+                                        setExternalData('names_list', val);
+                                        if (count > 0) {
+                                            setExternalData('quantity', count);
+                                        }
+                                    }}
+                                    className="bg-background border-input text-xs font-medium"
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <Label htmlFor="ext_label" className="text-xs font-bold">Candidate Label / Fallback Name</Label>
                                 <Input
                                     id="ext_label"
                                     placeholder="e.g. Guest Candidate, Walk-in Applicant"

@@ -116,6 +116,13 @@ class StudentController extends Controller
 
                     $byStudentNumber->put($student->student_number, $student);
                     $byEmail->put($student->email, $student);
+                } elseif (! empty($item['name']) && (str_starts_with($student->name, 'Guest Candidate') || str_starts_with($student->first_name, 'Guest Candidate'))) {
+                    $nameParts = explode(' ', $item['name'], 2);
+                    $student->update([
+                        'name' => $item['name'],
+                        'first_name' => $nameParts[0] ?? $item['name'],
+                        'surname' => $nameParts[1] ?? 'Candidate',
+                    ]);
                 }
 
                 $pairKey = $student->id.'-'.$item['course_id'];
@@ -610,33 +617,59 @@ class StudentController extends Controller
         $instructorId = $request->user()->id;
 
         $validated = $request->validate([
-            'quantity' => 'required|integer|min:1|max:100',
+            'quantity' => 'nullable|integer|min:1|max:100',
+            'names_list' => 'nullable|string|max:5000',
             'prefix' => 'nullable|string|max:10',
             'label' => 'nullable|string|max:100',
             'course_id' => 'nullable|integer|exists:courses,id',
         ]);
 
-        $quantity = (int) $validated['quantity'];
         $prefix = strtoupper(trim($validated['prefix'] ?? 'EXT')) ?: 'EXT';
         $label = trim($validated['label'] ?? 'Guest Candidate');
         $courseId = $validated['course_id'] ?? null;
 
+        $names = [];
+        if (! empty($validated['names_list'])) {
+            $rawNames = preg_split('/[\r\n,]+/', $validated['names_list']);
+            foreach ($rawNames as $rName) {
+                $clean = trim($rName);
+                if (! empty($clean)) {
+                    $names[] = $clean;
+                }
+            }
+        }
+
+        $quantity = ! empty($names) ? count($names) : max(1, (int) ($validated['quantity'] ?? 1));
+
         $count = 0;
-        DB::transaction(function () use ($instructorId, $quantity, $prefix, $label, $courseId, &$count) {
+        DB::transaction(function () use ($instructorId, $quantity, $names, $prefix, $label, $courseId, &$count) {
             for ($i = 0; $i < $quantity; $i++) {
                 $studentNumber = User::generateNextExternalStudentNumber($prefix);
                 $cleanNumber = str_replace('-', '', strtolower($studentNumber));
                 $email = "{$cleanNumber}@guest.exam";
-                $name = "{$label} (".substr($studentNumber, -4).')';
+
+                if (! empty($names[$i])) {
+                    $candidateFullName = $names[$i];
+                    $parts = explode(' ', $candidateFullName, 2);
+                    $firstName = $parts[0] ?? $candidateFullName;
+                    $surname = $parts[1] ?? 'Candidate';
+                    $name = $candidateFullName;
+                } else {
+                    $firstName = $label;
+                    $surname = substr($studentNumber, -4);
+                    $name = "{$label} (".substr($studentNumber, -4).')';
+                }
 
                 $student = User::create([
                     'created_by_user_id' => $instructorId,
                     'student_number' => $studentNumber,
-                    'first_name' => $label,
-                    'surname' => substr($studentNumber, -4),
+                    'first_name' => $firstName,
+                    'surname' => $surname,
                     'name' => $name,
                     'email' => $email,
                     'password' => Hash::make('guest123'),
+                    'role' => 'student',
+                    'email_verified_at' => now(),
                 ]);
 
                 if ($courseId) {
