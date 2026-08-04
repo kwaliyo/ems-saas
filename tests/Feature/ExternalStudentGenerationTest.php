@@ -40,6 +40,33 @@ class ExternalStudentGenerationTest extends TestCase
         $this->assertTrue($guestStudent->enrolledCourses->contains($course->id));
     }
 
+    public function test_instructor_can_generate_external_students_with_names_list(): void
+    {
+        $instructor = User::factory()->create();
+
+        $response = $this->actingAs($instructor)->post('/students/generate-external-ids', [
+            'names_list' => "John Doe\nJane Smith\nAmina Bello",
+            'prefix' => 'EXT',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('users', [
+            'name' => 'John Doe',
+            'first_name' => 'John',
+            'surname' => 'Doe',
+            'student_number' => 'EXT-2026-0001',
+        ]);
+
+        $this->assertDatabaseHas('users', [
+            'name' => 'Jane Smith',
+            'first_name' => 'Jane',
+            'surname' => 'Smith',
+            'student_number' => 'EXT-2026-0002',
+        ]);
+    }
+
     public function test_join_page_receives_initial_student_id_query_parameter(): void
     {
         $response = $this->get('/join?code=NMOB7T&student_id=EXT-2026-0001');
