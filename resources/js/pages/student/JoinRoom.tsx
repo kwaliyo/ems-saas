@@ -15,6 +15,11 @@ interface Props {
     errors?: Record<string, string>;
 }
 
+function isGuestId(id: string): boolean {
+    const upper = id.toUpperCase().trim();
+    return /^[A-Z]{2,6}-\d{4}-/.test(upper) || upper.endsWith('@GUEST.EXAM');
+}
+
 export default function JoinRoom({ initialCode = '', initialStudentId = '', errors }: Props) {
     const [highContrast, setHighContrast] = useState(false);
     const [codeConfirmed, setCodeConfirmed] = useState(Boolean(initialCode && initialCode.trim().length >= 3));
@@ -22,9 +27,11 @@ export default function JoinRoom({ initialCode = '', initialStudentId = '', erro
     const { data, setData, post, processing, errors: formErrors } = useForm({
         code: initialCode,
         student_id_code: initialStudentId,
+        name: '',
     });
 
     const combinedErrors = { ...errors, ...formErrors };
+    const looksLikeGuest = isGuestId(data.student_id_code);
 
     const handleCodeNext = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -155,7 +162,7 @@ export default function JoinRoom({ initialCode = '', initialStudentId = '', erro
                                     </button>
                                 </div>
 
-                                {/* ONLY STUDENT NUMBER / ID INPUT */}
+                                {/* STUDENT NUMBER / ID INPUT */}
                                 <div className="space-y-2">
                                     <Label
                                         htmlFor="student_id_code"
@@ -166,7 +173,7 @@ export default function JoinRoom({ initialCode = '', initialStudentId = '', erro
                                     <Input
                                         id="student_id_code"
                                         type="text"
-                                        placeholder="e.g. 2026/001 or STU-9021"
+                                        placeholder="e.g. EXT-2026-0001 or STU-9021"
                                         value={data.student_id_code}
                                         onChange={(e) => setData('student_id_code', e.target.value)}
                                         className={`h-12 text-sm font-bold ${
@@ -189,9 +196,43 @@ export default function JoinRoom({ initialCode = '', initialStudentId = '', erro
                                     )}
                                 </div>
 
+                                {/* FULL NAME — shown when the ID looks like a guest/external ID */}
+                                {looksLikeGuest && (
+                                    <div className="space-y-2">
+                                        <Label
+                                            htmlFor="candidate_name"
+                                            className="text-xs font-extrabold uppercase tracking-wider text-foreground flex items-center gap-1.5"
+                                        >
+                                            <UserCheck className="w-3.5 h-3.5 text-amber-500" />
+                                            <span>Your Full Name <span className="text-amber-500">*</span></span>
+                                        </Label>
+                                        <Input
+                                            id="candidate_name"
+                                            type="text"
+                                            placeholder="e.g. John Doe"
+                                            value={data.name}
+                                            onChange={(e) => setData('name', e.target.value)}
+                                            className={`h-12 text-sm font-semibold ${
+                                                highContrast
+                                                    ? 'bg-black border border-yellow-400 text-yellow-400'
+                                                    : 'bg-background border-input text-foreground'
+                                            }`}
+                                            required
+                                        />
+                                        {combinedErrors.name && (
+                                            <p className="text-xs font-medium text-destructive mt-1">
+                                                {combinedErrors.name}
+                                            </p>
+                                        )}
+                                        <p className="text-[11px] text-muted-foreground">
+                                            Your name will appear on your result sheet and the instructor's live dashboard.
+                                        </p>
+                                    </div>
+                                )}
+
                                 <Button
                                     type="submit"
-                                    disabled={processing || !data.student_id_code.trim()}
+                                    disabled={processing || !data.student_id_code.trim() || (looksLikeGuest && !data.name.trim())}
                                     className="w-full h-12 font-extrabold text-xs shadow-xs gap-2 cursor-pointer"
                                 >
                                     {processing ? (
