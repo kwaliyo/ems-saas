@@ -188,14 +188,26 @@ class StudentJoinController extends Controller
             }
         }
 
+        // If a guest supplied their real name, update the display name and persist it on their user record
+        $enteredName = ! empty($validated['name']) ? trim($validated['name']) : null;
+        if ($enteredName && $studentUser && str_starts_with($studentUser->name ?? '', 'Guest Candidate')) {
+            $nameParts = explode(' ', $enteredName, 2);
+            $studentUser->update([
+                'name' => $enteredName,
+                'first_name' => $nameParts[0] ?? $enteredName,
+                'surname' => $nameParts[1] ?? '',
+            ]);
+        }
+
         $sessionToken = Str::uuid()->toString();
 
         // Assign team colors for space race
         $teamColors = ['blue', 'rocket-red', 'emerald', 'amber', 'purple', 'cyan'];
-        $assignedColor = $teamColors[crc32($displayName) % count($teamColors)];
+        $resolvedName = $enteredName ?: $displayName;
+        $assignedColor = $teamColors[crc32($resolvedName) % count($teamColors)];
 
         $participant = $room->participants()->create([
-            'name' => $displayName,
+            'name' => $resolvedName,
             'student_id_code' => $studentCode,
             'session_token' => $sessionToken,
             'team_color' => $assignedColor,
