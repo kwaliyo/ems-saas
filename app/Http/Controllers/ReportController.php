@@ -44,6 +44,12 @@ class ReportController extends Controller
     {
         $this->authorizeOwner($room);
 
+        // Ensure the participant actually belongs to this room (prevents IDOR
+        // where a valid participant id from another room could be viewed).
+        if ($participant->room_id !== $room->id) {
+            abort(404);
+        }
+
         $room->load(['assessment.questions.options']);
         $participant->load(['answers']);
         $room->ensureQuestionsLoaded();
@@ -116,9 +122,8 @@ class ReportController extends Controller
     private function authorizeOwner(Room $room): void
     {
         $user = auth()->user();
-        $isSuperAdmin = $user?->isSuperAdmin() || session()->has('impersonator_id');
 
-        if ($room->user_id !== auth()->id() && ! $isSuperAdmin) {
+        if ($room->user_id !== $user?->id && ! $user?->isSuperAdmin()) {
             abort(403, 'Unauthorized access to this report.');
         }
     }

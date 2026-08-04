@@ -100,6 +100,8 @@ class CourseController extends Controller
 
     public function show(Course $course): Response
     {
+        $this->authorizeCourseManagement($course, auth()->user());
+
         $course->load([
             'instructor',
             'modules' => function ($mq) {

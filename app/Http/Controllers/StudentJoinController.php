@@ -289,14 +289,36 @@ class StudentJoinController extends Controller
 
         $isCompleted = $participant->completed_at !== null || $room->status === 'completed';
 
+        // Do not leak per-question correctness while the exam is live unless the
+        // instructor enabled feedback; otherwise strip it from the poll payload.
+        $module = $room->assessment?->module;
+        $showFeedback = (bool) ($module
+            ? $module->allow_review
+            : ($room->settings['show_feedback'] ?? false));
+
+        $answersPayload = $answers->map(function ($answer) use ($showFeedback, $isCompleted) {
+            $data = [
+                'question_id' => $answer->question_id,
+                'selected_option_ids' => $answer->selected_option_ids,
+                'text_answer' => $answer->text_answer,
+            ];
+
+            if ($showFeedback || $isCompleted) {
+                $data['is_correct'] = $answer->is_correct;
+                $data['score_awarded'] = $answer->score_awarded;
+            }
+
+            return $data;
+        });
+
         return response()->json([
             'status' => $room->status,
             'room_status' => $room->status,
             'current_question_index' => $room->current_question_index,
-            'participant_score' => $participant->score,
+            'participant_score' => ($showFeedback || $isCompleted) ? $participant->score : null,
             'completed_at' => $participant->completed_at ? $participant->completed_at->toISOString() : null,
             'is_completed' => $isCompleted,
-            'answers' => $answers,
+            'answers' => $answersPayload,
         ]);
     }
 
@@ -352,6 +374,11 @@ class StudentJoinController extends Controller
             }
         }
 
+        // The auto-save UI legitimately re-sends an answer while a question is
+        // open (e.g. building a multi_select set, changing a choice), so answers
+        // are upserted rather than locked after first submit. The guess-and-check
+        // exploit is closed below by never leaking correctness unless the
+        // instructor enabled live feedback.
         ParticipantAnswer::updateOrCreate(
             [
                 'participant_id' => $participant->id,
@@ -369,12 +396,22 @@ class StudentJoinController extends Controller
         $totalScore = ParticipantAnswer::where('participant_id', $participant->id)->sum('score_awarded');
         $participant->update(['score' => $totalScore]);
 
-        return response()->json([
-            'success' => true,
-            'is_correct' => $isCorrect,
-            'score_awarded' => $scoreAwarded,
-            'total_score' => (int) $totalScore,
-        ]);
+        // Only reveal correctness / running score when the instructor enabled
+        // live feedback for this room. Returning it unconditionally exposed the
+        // answer key and enabled retry-until-correct.
+        $module = $room->assessment?->module;
+        $showFeedback = (bool) ($module
+            ? $module->allow_review
+            : ($room->settings['show_feedback'] ?? true));
+
+        $response = ['success' => true, 'recorded' => true];
+        if ($showFeedback) {
+            $response['is_correct'] = $isCorrect;
+            $response['score_awarded'] = $scoreAwarded;
+            $response['total_score'] = (int) $totalScore;
+        }
+
+        return response()->json($response);
     }
 
     public function completeExam(Room $room, string $token): JsonResponse

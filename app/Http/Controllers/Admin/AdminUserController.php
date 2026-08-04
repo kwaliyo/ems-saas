@@ -76,14 +76,38 @@ class AdminUserController extends Controller
 
     public function impersonate(User $user): RedirectResponse
     {
-        if ($user->id === auth()->id()) {
+        $actor = auth()->user();
+
+        // Defense in depth: only a genuine super admin may start impersonation.
+        if (! $actor || ! $actor->isSuperAdmin()) {
+            abort(403);
+        }
+
+        // Do not allow starting a new impersonation while already impersonating —
+        // it would overwrite impersonator_id and strand the original admin.
+        if (session()->has('impersonator_id')) {
+            return back()->with('flash', [
+                'message' => 'Stop the current impersonation before impersonating another user.',
+                'type' => 'error',
+            ]);
+        }
+
+        if ($user->id === $actor->id) {
             return back()->with('flash', [
                 'message' => 'You are already logged in as this user.',
                 'type' => 'error',
             ]);
         }
 
-        session(['impersonator_id' => auth()->id()]);
+        // Prevent impersonating another super admin.
+        if ($user->isSuperAdmin()) {
+            return back()->with('flash', [
+                'message' => 'You cannot impersonate another super admin.',
+                'type' => 'error',
+            ]);
+        }
+
+        session(['impersonator_id' => $actor->id]);
         auth()->login($user);
 
         return redirect()->route('dashboard')->with('flash', [
@@ -98,7 +122,9 @@ class AdminUserController extends Controller
 
         if ($impersonatorId) {
             $admin = User::find($impersonatorId);
-            if ($admin) {
+
+            // Only restore the session if the stored account is still a super admin.
+            if ($admin && $admin->isSuperAdmin()) {
                 session()->forget('impersonator_id');
                 auth()->login($admin);
 
@@ -107,6 +133,9 @@ class AdminUserController extends Controller
                     'type' => 'success',
                 ]);
             }
+
+            // Stored account is gone or no longer privileged — clear the flag defensively.
+            session()->forget('impersonator_id');
         }
 
         return redirect()->route('dashboard');

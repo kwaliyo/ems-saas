@@ -20,11 +20,20 @@ use Laravel\Fortify\Features;
 
 // Student Instant Join & Experience (No Auth Required)
 Route::get('/join/{code?}', [StudentJoinController::class, 'joinPage'])->name('join.page');
-Route::post('/join', [StudentJoinController::class, 'joinSubmit'])->name('join.submit');
+// Rate-limit join attempts to slow brute-forcing of room codes / student IDs.
+Route::post('/join', [StudentJoinController::class, 'joinSubmit'])
+    ->middleware('throttle:20,1')
+    ->name('join.submit');
 Route::get('/room/{room}/student/{token}', [StudentJoinController::class, 'studentRoom'])->name('student.room');
-Route::get('/api/room/{room}/student/{token}/state', [StudentJoinController::class, 'studentState'])->name('student.state');
-Route::post('/api/room/{room}/student/{token}/submit', [StudentJoinController::class, 'submitAnswer'])->name('student.submit');
-Route::post('/api/room/{room}/student/{token}/complete', [StudentJoinController::class, 'completeExam'])->name('student.complete');
+Route::get('/api/room/{room}/student/{token}/state', [StudentJoinController::class, 'studentState'])
+    ->middleware('throttle:120,1')
+    ->name('student.state');
+Route::post('/api/room/{room}/student/{token}/submit', [StudentJoinController::class, 'submitAnswer'])
+    ->middleware('throttle:120,1')
+    ->name('student.submit');
+Route::post('/api/room/{room}/student/{token}/complete', [StudentJoinController::class, 'completeExam'])
+    ->middleware('throttle:30,1')
+    ->name('student.complete');
 
 // Home Landing redirecting to join or login
 Route::get('/', function () {

@@ -16,7 +16,11 @@ class RoomController extends Controller
     private function authorizeLaunch(Request $request, int $ownerUserId): void
     {
         $user = $request->user();
-        $canLaunch = $ownerUserId === $user->id || $user->isSuperAdmin() || session()->has('impersonator_id') || $user->role === 'instructor';
+
+        // Only the owner of the assessment/module (or a super admin) may launch it.
+        // The previous `$user->role === 'instructor'` clause made this check a no-op,
+        // letting any instructor launch another tenant's assessment.
+        $canLaunch = $ownerUserId === $user->id || $user->isSuperAdmin();
 
         if (! $canLaunch) {
             abort(403, 'Unauthorized to launch live room for this assessment.');
@@ -223,9 +227,8 @@ class RoomController extends Controller
     private function authorizeOwner(Room $room): void
     {
         $user = auth()->user();
-        $isSuperAdmin = $user?->isSuperAdmin() || session()->has('impersonator_id');
 
-        if ($room->user_id !== auth()->id() && ! $isSuperAdmin) {
+        if ($room->user_id !== $user?->id && ! $user?->isSuperAdmin()) {
             abort(403, 'Unauthorized access to this live room.');
         }
     }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\Participant;
 use App\Models\ParticipantAnswer;
+use App\Models\Question;
 use App\Models\Room;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,23 +17,19 @@ class AnalyticsController extends Controller
     {
         $instructorId = $request->user()->id;
 
-        // Fetch completed rooms for this instructor
-        $completedRooms = Room::where('user_id', $instructorId)
+        // 1. Total Completed Exams Count (Optimized count without eager loading nested models)
+        $totalCompletedExams = Room::where('user_id', $instructorId)
             ->where('status', 'completed')
-            ->with(['assessment', 'participants.answers'])
-            ->latest()
-            ->get();
+            ->count();
 
-        $totalCompletedExams = $completedRooms->count();
-        $totalCandidatesTested = Participant::whereHas('room', function ($q) use ($instructorId) {
-            $q->where('user_id', $instructorId);
-        })->whereNotNull('completed_at')->count();
-
-        // Pass/Fail distribution
+        // 2. Fetch tested participants once
         $participants = Participant::whereHas('room', function ($q) use ($instructorId) {
             $q->where('user_id', $instructorId);
         })->whereNotNull('completed_at')->get();
 
+        $totalCandidatesTested = $participants->count();
+
+        // Pass/Fail distribution
         $scoreDistribution = [
             '90-100%' => 0,
             '75-89%' => 0,
@@ -63,31 +60,39 @@ class AnalyticsController extends Controller
             }
         }
 
-        $overallAveragePercent = $participants->count() > 0
-            ? round($totalScorePctSum / $participants->count(), 1)
+        $overallAveragePercent = $totalCandidatesTested > 0
+            ? round($totalScorePctSum / $totalCandidatesTested, 1)
             : 0;
 
-        $overallPassRate = $participants->count() > 0
-            ? round(($passedCandidates / $participants->count()) * 100, 1)
+        $overallPassRate = $totalCandidatesTested > 0
+            ? round(($passedCandidates / $totalCandidatesTested) * 100, 1)
             : 0;
 
-        // Course Breakdown Analytics
+        // 3. Course Breakdown Analytics (Optimized withCount for students and modules)
         $courses = Course::where('user_id', $instructorId)
-            ->with(['modules.assessments', 'students'])
+            ->withCount(['students', 'modules'])
             ->get();
+
+        $instructorRooms = Room::where('user_id', $instructorId)
+            ->with('assessment.module')
+            ->get(['id', 'user_id', 'assessment_id', 'assessment_subject']);
+
+        $participantsByRoom = Participant::whereIn('room_id', $instructorRooms->pluck('id'))
+            ->get()
+            ->groupBy('room_id');
 
         $courseAnalytics = [];
         foreach ($courses as $course) {
-            $courseRoomIds = Room::where('user_id', $instructorId)
-                ->where(function ($query) use ($course) {
-                    $query->whereIn('assessment_subject', [$course->title, $course->code])
-                        ->orWhereHas('assessment.module', function ($q) use ($course) {
-                            $q->where('course_id', $course->id);
-                        });
-                })
-                ->pluck('id');
+            $courseRoomIds = $instructorRooms->filter(function ($room) use ($course) {
+                $subjectMatch = in_array($room->assessment_subject, [$course->title, $course->code], true);
+                $moduleMatch = $room->assessment?->module?->course_id === $course->id;
 
-            $cParticipants = Participant::whereIn('room_id', $courseRoomIds)->get();
+                return $subjectMatch || $moduleMatch;
+            })->pluck('id');
+
+            $cParticipants = $courseRoomIds
+                ->flatMap(fn ($roomId) => $participantsByRoom->get($roomId, collect()))
+                ->values();
             $cScoreSum = 0;
             $cPassCount = 0;
             foreach ($cParticipants as $cp) {
@@ -103,58 +108,50 @@ class AnalyticsController extends Controller
                 'id' => $course->id,
                 'code' => $course->code,
                 'title' => $course->title,
-                'students_count' => $course->students->count(),
-                'modules_count' => $course->modules->count(),
+                'students_count' => $course->students_count,
+                'modules_count' => $course->modules_count,
                 'total_exams' => $cParticipants->count(),
                 'average_pct' => $cParticipants->count() > 0 ? round($cScoreSum / $cParticipants->count(), 1) : 0,
                 'pass_rate_pct' => $cParticipants->count() > 0 ? round(($cPassCount / $cParticipants->count()) * 100, 1) : 0,
             ];
         }
 
-        // Hardest & Most Challenging Questions Analytics
-        $answers = ParticipantAnswer::whereHas('participant.room', function ($q) use ($instructorId) {
+        // 4. Hardest & Most Challenging Questions (Aggregated via SQL to avoid N+1 and memory overhead)
+        $questionStatsRaw = ParticipantAnswer::whereHas('participant.room', function ($q) use ($instructorId) {
             $q->where('user_id', $instructorId);
-        })->with('question')->get();
+        })
+            ->selectRaw('question_id, COUNT(*) as total_answers, SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) as correct_answers')
+            ->groupBy('question_id')
+            ->get();
 
-        $questionStats = [];
-        foreach ($answers as $ans) {
-            if (! $ans->question) {
-                continue;
-            }
-            $qId = $ans->question_id;
-            if (! isset($questionStats[$qId])) {
-                $questionStats[$qId] = [
-                    'id' => $qId,
-                    'text' => $ans->question->question_text,
-                    'type' => $ans->question->type,
-                    'total_answers' => 0,
-                    'correct_answers' => 0,
-                ];
-            }
-            $questionStats[$qId]['total_answers']++;
-            if ($ans->is_correct) {
-                $questionStats[$qId]['correct_answers']++;
-            }
-        }
+        $questions = Question::whereIn('id', $questionStatsRaw->pluck('question_id'))
+            ->get()
+            ->keyBy('id');
 
         $itemAnalysis = [];
-        foreach ($questionStats as $qStat) {
-            $incorrect = $qStat['total_answers'] - $qStat['correct_answers'];
-            $errorRate = $qStat['total_answers'] > 0
-                ? round(($incorrect / $qStat['total_answers']) * 100, 1)
+        foreach ($questionStatsRaw as $qStat) {
+            $question = $questions->get($qStat->question_id);
+            if (! $question) {
+                continue;
+            }
+
+            $totalAnswers = (int) $qStat->total_answers;
+            $correctAnswers = (int) $qStat->correct_answers;
+            $incorrect = $totalAnswers - $correctAnswers;
+            $errorRate = $totalAnswers > 0
+                ? round(($incorrect / $totalAnswers) * 100, 1)
                 : 0;
 
             $itemAnalysis[] = [
-                'id' => $qStat['id'],
-                'question_text' => $qStat['text'],
-                'type' => $qStat['type'],
-                'total_attempts' => $qStat['total_answers'],
-                'correct_count' => $qStat['correct_answers'],
+                'id' => $question->id,
+                'question_text' => $question->question_text,
+                'type' => $question->type,
+                'total_attempts' => $totalAnswers,
+                'correct_count' => $correctAnswers,
                 'error_rate_pct' => $errorRate,
             ];
         }
 
-        // Sort hardest questions first (highest error rate)
         usort($itemAnalysis, fn ($a, $b) => $b['error_rate_pct'] <=> $a['error_rate_pct']);
         $itemAnalysis = array_slice($itemAnalysis, 0, 6);
 
